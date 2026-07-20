@@ -1,0 +1,54 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #dde1df;
+  font-family: "IBM Plex Sans", system-ui, -apple-system, Segoe UI, sans-serif;
+  color: #1c2422;
+}
+#root {
+  height: 100%;
+}
+a {
+  color: #0f6e63;
+}
+a:hover {
+  color: #0a4f47;
+}
+* {
+  box-sizing: border-box;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #b9c0bd;
+  border-radius: 5px;
+  border: 2px solid #eff1f0;
+}
+::-webkit-scrollbar-track {
+  background: #eff1f0;
+}
+@keyframes la-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+textarea:focus,
+input:focus {
+  outline: 2px solid #0f6e63;
+  outline-offset: -1px;
+}
+button {
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+}
+code,
+pre {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
