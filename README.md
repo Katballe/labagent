@@ -16,7 +16,7 @@ leaves your computer.
 ## Quick start
 
 ```bash
-git clone https://github.com/<your-username>/labagent.git
+git clone https://github.com/katballe/labagent.git
 cd labagent
 npm install
 npm run dev
