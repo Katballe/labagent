@@ -1,0 +1,274 @@
+{
+  "runId": "VR-20260927-79d97bc",
+  "plan": "TP-001",
+  "testSet": {
+    "id": "HT-001",
+    "file": "src/evals/heldout.js",
+    "sha256": "b60efab2a0cd38efb298d06adbb1c857ba3301a2d7d87901093a2cc84ac118aa",
+    "cases": {
+      "t1Answerable": 30,
+      "t1NotAnswerable": 18,
+      "t2": 15,
+      "t3": 9
+    }
+  },
+  "executedAt": "2026-09-27T12:41:09.748Z",
+  "executedBy": "Claude (AI assistant) under the Katballe git account",
+  "purpose": "first acceptance test of v2.0.0 (TP-001)",
+  "commit": "79d97bc",
+  "workingTreeClean": true,
+  "system": {
+    "app": "2.0.0",
+    "prompt": "v2.0.0",
+    "engine": "deterministic (instant) pipeline",
+    "configFingerprint": "87cf3b53df4c136b6b86c7ba8bd41518b827a05caba4a0f2c3312298dac3f7f4"
+  },
+  "metrics": {
+    "t1": {
+      "confusion": {
+        "TP": 19,
+        "FN": 11,
+        "TN": 17,
+        "FP": 1
+      },
+      "sensitivity": {
+        "value": 0.633,
+        "ci95": {
+          "low": 0.455,
+          "high": 0.781
+        }
+      },
+      "specificity": {
+        "value": 0.944,
+        "ci95": {
+          "low": 0.742,
+          "high": 0.99
+        }
+      },
+      "precision": 0.95,
+      "accuracy": 0.75,
+      "f1": 0.76,
+      "citationAccuracy": {
+        "value": 1,
+        "n": 19
+      },
+      "answerableBySubgroup": {
+        "analytical method": {
+          "n": 8,
+          "ok": 4,
+          "rate": 0.5
+        },
+        "quality & OOS": {
+          "n": 6,
+          "ok": 4,
+          "rate": 0.667
+        },
+        "equipment & qualification": {
+          "n": 7,
+          "ok": 6,
+          "rate": 0.857
+        },
+        "lifecycle & standards": {
+          "n": 4,
+          "ok": 2,
+          "rate": 0.5
+        },
+        "records & training": {
+          "n": 5,
+          "ok": 3,
+          "rate": 0.6
+        }
+      },
+      "notAnswerableBySubgroup": {
+        "data held elsewhere": {
+          "n": 5,
+          "ok": 5,
+          "rate": 1
+        },
+        "adjacent detail": {
+          "n": 4,
+          "ok": 3,
+          "rate": 0.75
+        },
+        "unknown identifier": {
+          "n": 4,
+          "ok": 4,
+          "rate": 1
+        },
+        "off-topic": {
+          "n": 5,
+          "ok": 5,
+          "rate": 1
+        }
+      }
+    },
+    "t2": {
+      "exactMatch": 0.867,
+      "n": 15,
+      "bySubgroup": {
+        "template query": {
+          "n": 11,
+          "ok": 9,
+          "rate": 0.818
+        },
+        "no template": {
+          "n": 1,
+          "ok": 1,
+          "rate": 1
+        },
+        "change request": {
+          "n": 3,
+          "ok": 3,
+          "rate": 1
+        }
+      }
+    },
+    "t3": {
+      "accuracy": 0.778,
+      "n": 9,
+      "bySubgroup": {
+        "evidence question": {
+          "n": 6,
+          "ok": 4,
+          "rate": 0.667
+        },
+        "out of scope": {
+          "n": 3,
+          "ok": 3,
+          "rate": 1
+        }
+      }
+    }
+  },
+  "acceptance": [
+    {
+      "id": "AC-1",
+      "criterion": "T1 specificity 100 %, in every not-answerable subgroup",
+      "value": "0.944 (data held elsewhere 5/5, adjacent detail 3/4, unknown identifier 4/4, off-topic 5/5)",
+      "pass": false
+    },
+    {
+      "id": "AC-2",
+      "criterion": "T1 citation accuracy 100 % of answered, answerable questions",
+      "value": "1 (n=19)",
+      "pass": true
+    },
+    {
+      "id": "AC-3",
+      "criterion": "T1 sensitivity ≥ 80 %",
+      "value": "0.633 (95 % CI 0.455–0.781)",
+      "pass": false
+    },
+    {
+      "id": "AC-4",
+      "criterion": "T2 exact match ≥ 90 %, change requests 100 % declined",
+      "value": "0.867; change requests 3/3",
+      "pass": false
+    },
+    {
+      "id": "AC-5",
+      "criterion": "T3 accuracy ≥ 90 %, out-of-scope 100 % declined",
+      "value": "0.778; out of scope 3/3",
+      "pass": false
+    }
+  ],
+  "passed": false,
+  "failures": [
+    {
+      "cat": "factual",
+      "group": "analytical method",
+      "name": "What rotation speed is used for the MV-0412 dissolution test?",
+      "detail": "refused (unknown-subject, confidence 0.64)"
+    },
+    {
+      "cat": "factual",
+      "group": "analytical method",
+      "name": "What is the limit for a single unknown impurity under MV-0388?",
+      "detail": "refused (unknown-subject, confidence 0.81)"
+    },
+    {
+      "cat": "factual",
+      "group": "analytical method",
+      "name": "What recovery must the water standard achieve before Karl Fischer samples are analysed?",
+      "detail": "refused (unknown-subject, confidence 0.71)"
+    },
+    {
+      "cat": "factual",
+      "group": "analytical method",
+      "name": "Which USP chapter governs content uniformity testing?",
+      "detail": "refused (unknown-subject, confidence 0.59)"
+    },
+    {
+      "cat": "factual",
+      "group": "quality & OOS",
+      "name": "When is a retest allowed after an OOS result?",
+      "detail": "refused (unknown-subject, confidence 0.55)"
+    },
+    {
+      "cat": "factual",
+      "group": "quality & OOS",
+      "name": "Does a passing retest cancel the original OOS result?",
+      "detail": "refused (unknown-subject, confidence 0.73)"
+    },
+    {
+      "cat": "factual",
+      "group": "equipment & qualification",
+      "name": "What drift limit applied during the operational qualification of INS-201?",
+      "detail": "refused (unknown-subject, confidence 0.84)"
+    },
+    {
+      "cat": "factual",
+      "group": "lifecycle & standards",
+      "name": "What happens to reference standards that have expired?",
+      "detail": "refused (unknown-subject, confidence 0.69)"
+    },
+    {
+      "cat": "factual",
+      "group": "lifecycle & standards",
+      "name": "Within how many hours must a received sample be logged in the LIMS?",
+      "detail": "refused (unknown-subject, confidence 0.79)"
+    },
+    {
+      "cat": "factual",
+      "group": "records & training",
+      "name": "Whose qualification on MV-0412 has lapsed?",
+      "detail": "refused (unknown-subject, confidence 0.73)"
+    },
+    {
+      "cat": "factual",
+      "group": "records & training",
+      "name": "What was the root cause identified in INV-2024-031?",
+      "detail": "refused (unknown-subject, confidence 0.84)"
+    },
+    {
+      "cat": "refusal",
+      "group": "adjacent detail",
+      "name": "How often must the Karl Fischer titrator be serviced?",
+      "detail": "answered, citing SOP-EQ-0031"
+    },
+    {
+      "cat": "nl2sql",
+      "group": "template query",
+      "name": "Which instruments are overdue for calibration?",
+      "detail": "instrument_id: INS-114, INS-201, INS-088"
+    },
+    {
+      "cat": "nl2sql",
+      "group": "template query",
+      "name": "Which batches have samples registered?",
+      "detail": "No validated query template matches this question. Templates cover results, OOS, samples, batches, instruments, calibration and analyst qualifications — name an id or a topic, e.g. “OOS results for batch B-2291”, “results on INS-114 in the last 7 days”, “who is qualified on MV-0407?”. With an AI model enabled, it can draft an ad-hoc query instead, labelled unvalidated."
+    },
+    {
+      "cat": "workflow",
+      "group": "evidence question",
+      "name": "triage: When did INS-114's calibration expire?",
+      "detail": "declined"
+    },
+    {
+      "cat": "workflow",
+      "group": "evidence question",
+      "name": "triage: Can a batch cause be ruled out yet?",
+      "detail": "declined"
+    }
+  ]
+}
