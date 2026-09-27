@@ -143,6 +143,7 @@ labelled INFORMATIONAL.
 | VR-20260927-c3bdcff-INFO (after CR-002–004) | 0.633 | 0.944 | 1.000 | 0.889 |
 | VR-20260927-d2fe349-INFO (CR-005 first version) | 0.733 | 0.944 | 1.000 | 0.778 — regression found and corrected |
 | VR-20260927-07df8d0-INFO (after CR-005 correction) | 0.733 | 0.944 | 1.000 | 0.889 |
+| VR-20260927-8b88e0d-INFO (after CR-007 — SOP path unchanged, as intended) | 0.733 | 0.944 | 1.000 | 0.889 |
 
 ## 7. Required actions before release
 
