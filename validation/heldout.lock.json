@@ -11,5 +11,10 @@
     "t2": 15,
     "t3": 9
   },
-  "note": "Frozen before first execution. Questions and labels written by an AI assistant (Claude) — see TP-001 §2 and deviations DEV-001/002/005. Do not edit: any change invalidates acceptance results (Annex 22 §6)."
+  "note": "Frozen before first execution. Questions and labels written by an AI assistant (Claude) — see TP-001 §2 and deviations DEV-001/002/005. Do not edit: any change invalidates acceptance results (Annex 22 §6).",
+  "consumed": {
+    "by": "VR-20260927-79d97bc",
+    "at": "2026-09-27T12:41:09.748Z",
+    "reason": "Results were used to investigate failures and to raise change requests CR-002..CR-004, so HT-001 now informs development and can no longer provide acceptance evidence (Annex 22 §6.1). Acceptance of a changed system needs a new, independent held-out set (HT-002)."
+  }
 }

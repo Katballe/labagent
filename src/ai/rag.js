@@ -62,6 +62,7 @@ export function stem(t) {
   for (const s of SUFFIXES) {
     if (t.endsWith(s) && t.length - s.length >= 4) { t = t.slice(0, -s.length); break; }
   }
+  if (t.length > 4 && t.endsWith("e")) t = t.slice(0, -1); // CR-004: "expire" ~ "expired"
   return t.length > 6 ? t.slice(0, 6) : t;
 }
 

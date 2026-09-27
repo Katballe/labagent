@@ -53,6 +53,17 @@ export function translate(question) {
 
   // Calibration due / overdue
   if (/\boverdue\b|\bdue (for|soon)\b|\bcalibration due\b|\bexpir/.test(lower) && /calibrat|instrument|equipment|hplc|due/.test(lower)) {
+    // CR-002: "overdue"/"expired" alone means past due — not also "due soon".
+    const upcoming = /\bdue (soon|in|within)\b|\bor due\b|\bnext\b|\bupcoming\b|\bwithin\b|\bcalibration due\b/.test(lower) || windowDays(q) !== null;
+    if (/\boverdue\b|\bexpired?\b/.test(lower) && !upcoming) {
+      return {
+        intent: "instruments overdue for calibration",
+        sql: `SELECT instrument_id, description, category, cal_due, 'OVERDUE' AS state
+FROM instruments
+WHERE cal_due < ${today}
+ORDER BY cal_due`,
+      };
+    }
     const d = windowDays(q) ?? 30;
     return {
       intent: "instruments due or overdue for calibration",
@@ -125,8 +136,9 @@ ORDER BY r.run_ts DESC`,
     };
   }
   // Results / samples, filtered by any ids or time window
-  if (f.any || /\bresults?\b|\bsamples?\b|\btested\b|\bruns?\b/.test(lower)) {
-    if (!f.any && !/\ball\b/.test(lower)) return null; // "show results" with nothing to filter on is too vague
+  // ("show results" with nothing to filter on is too vague — unless it is a
+  // listing question such as "which batches have samples", handled below: CR-003.)
+  if (f.any || (/\ball\b/.test(lower) && /\bresults?\b|\bsamples?\b|\btested\b|\bruns?\b/.test(lower))) {
     return {
       intent: "results with outcome",
       sql: `SELECT ${RESULT_COLS}

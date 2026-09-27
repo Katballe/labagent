@@ -56,7 +56,13 @@ if (sha !== lock.sha256) {
   process.exit(2);
 }
 
-const purpose = arg("--purpose") || "acceptance test";
+// A set whose results have informed development can't be acceptance evidence again.
+const informational = !!lock.consumed;
+if (informational && !args.includes("--informational")) {
+  console.error(`STOP: ${lock.id} was consumed by ${lock.consumed.by} — ${lock.consumed.reason}\nRe-run with --informational to measure against it anyway (not acceptance evidence).`);
+  process.exit(2);
+}
+const purpose = (arg("--purpose") || "acceptance test") + (informational ? " [INFORMATIONAL — test set consumed, not acceptance evidence]" : "");
 const commit = sh("git rev-parse --short HEAD") || process.env.GITHUB_SHA?.slice(0, 7) || "unknown";
 const clean = sh("git status --porcelain") === "";
 const executedAt = new Date().toISOString();
@@ -125,9 +131,9 @@ const acceptance = [
 ];
 const passed = acceptance.every((a) => a.pass);
 
-const runId = `VR-${executedAt.slice(0, 10).replace(/-/g, "")}-${commit}`;
+const runId = `VR-${executedAt.slice(0, 10).replace(/-/g, "")}-${commit}${informational ? "-INFO" : ""}`;
 const record = {
-  runId, plan: "TP-001", testSet: { id: lock.id, file, sha256: sha, cases: counts },
+  runId, plan: "TP-001", informational, testSet: { id: lock.id, file, sha256: sha, cases: counts },
   executedAt, executedBy: person, purpose, commit, workingTreeClean: clean,
   system: { app: APP_VERSION, prompt: PROMPT_VERSION, engine: "deterministic (instant) pipeline", configFingerprint: await configFingerprint() },
   metrics, acceptance, passed,
@@ -136,9 +142,10 @@ const record = {
 };
 writeFileSync(new URL(`validation/runs/${runId}.json`, root), JSON.stringify(record, null, 2) + "\n");
 const { cases, ...summary } = record;
-writeFileSync(new URL("validation/latest.json", root), JSON.stringify(summary, null, 2) + "\n");
+if (!informational) writeFileSync(new URL("validation/latest.json", root), JSON.stringify(summary, null, 2) + "\n");
 
 console.log(`\n${runId} · ${lock.id} (${sha.slice(0, 12)}…) · commit ${commit}${clean ? "" : " (UNCOMMITTED CHANGES — not valid for release)"}`);
+if (informational) console.log(`INFORMATIONAL: ${lock.id} was consumed by ${lock.consumed.by}; these results are not acceptance evidence.`);
 console.log(`config fingerprint ${record.system.configFingerprint.slice(0, 16)}…\n`);
 console.log(`T1 confusion  TP ${cm.TP}  FN ${cm.FN}  TN ${cm.TN}  FP ${cm.FP}`);
 console.log(`   sensitivity ${sens} (95% CI ${metrics.t1.sensitivity.ci95.low}–${metrics.t1.sensitivity.ci95.high})  specificity ${spec} (95% CI ${metrics.t1.specificity.ci95.low}–${metrics.t1.specificity.ci95.high})  precision ${prec}  F1 ${f1}`);

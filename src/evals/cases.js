@@ -138,6 +138,9 @@ export const NL2SQL = [
   { q: "Show failed results on INS-113", col: "result_id", ids: ["R-29981"] },
   { q: "List all instruments", col: "instrument_id", ids: ["INS-088", "INS-112", "INS-113", "INS-114", "INS-201"] },
   { q: "Is the analytical balance in calibration?", col: "instrument_id", ids: ["INS-088"] },
+  // CR-002 / CR-003 regressions
+  { q: "List the instruments whose calibration is overdue", col: "instrument_id", ids: ["INS-114"] },
+  { q: "Which batches are in the database?", col: "batch_id", ids: ["B-2290", "B-2291"] },
   { q: "What's the weather tomorrow?", ids: null },
   { q: "show results", ids: null },
   { q: "Delete all OOS results for batch B-2291", ids: null, refusedWrite: true },
@@ -171,6 +174,8 @@ export const TRIAGE = [
   { q: "What happens after I approve?", has: "QA queue", from: ["Approval gate"] },
   { q: "Was the analyst qualified?", has: "2025-11-18", from: ["Step 4", "TRN-MX-0207 / A-207 · MV-0412"] },
   { q: "Is there a precedent for this?", has: "INV-2024-031", from: ["Step 6", "INV-2024-031 §5 Conclusion"] },
+  // CR-004 regression: "expire" and "expired" are the same word to the retriever
+  { q: "Did the calibration of INS-114 expire before the run?", has: "2026-07-05" },
   { q: "What's the weather in Copenhagen?", refused: true },
   { q: "What is the shelf life of batch B-2291?", refused: true },
   { q: "Who is the CEO?", refused: true },
