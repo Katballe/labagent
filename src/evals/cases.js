@@ -176,6 +176,8 @@ export const TRIAGE = [
   { q: "Is there a precedent for this?", has: "INV-2024-031", from: ["Step 6", "INV-2024-031 §5 Conclusion"] },
   // CR-004 regression: "expire" and "expired" are the same word to the retriever
   { q: "Did the calibration of INS-114 expire before the run?", has: "2026-07-05" },
+  // CR-005 regression: quantifiers like "other"/"same" must still steer to the related-OOS step
+  { q: "Did any other sample in the same batch also fail?", has: "S-8839" },
   { q: "What's the weather in Copenhagen?", refused: true },
   { q: "What is the shelf life of batch B-2291?", refused: true },
   { q: "Who is the CEO?", refused: true },
