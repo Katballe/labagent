@@ -3,7 +3,7 @@ import { css } from "../lib/css.js";
 import { useApp } from "../state/store.jsx";
 import { QUERIES } from "../data/dataset.js";
 import { runDataQuery } from "../ai/labagent.js";
-import { runSelect, validateSelect, QUERY_TIMEOUT_MS, ROW_LIMIT } from "../ai/db.js";
+import { runSelect, validateSelect, QUERY_TIMEOUT_MS, ROW_LIMIT, NOW } from "../ai/db.js";
 
 const mono = "font-family:'IBM Plex Mono',monospace";
 const STRONG = ["OOS", "EXPIRED", "PASS", "IN CAL", "CURRENT", "LAPSED", "OVERDUE", "DUE SOON"];
@@ -84,6 +84,7 @@ export default function QueryTab() {
         <span style={css("font-weight:600;font-size:13px")}>Structured data query</span>
         <span style={css("font-size:11px;color:#5A6663")}>Question → read-only SQL, shown verbatim and run for real against an in-browser SQLite database.</span>
         <div style={css("flex:1")} />
+        <span title="The synthetic data set is frozen at this date; 'last 30 days', 'this week' and 'due soon' count from it" style={css(`${mono};font-size:10px;padding:3px 8px;background:#F7F8F7;border:1px solid #C6CCC9;border-radius:3px;color:#5A6663`)}>DATA AS OF {NOW}</span>
         <span style={css(`${mono};font-size:10px;padding:3px 8px;background:#E4EEEC;border:1px solid #B9D2CD;border-radius:3px;color:#0A4F47`)}>SELECT-ONLY · NO WRITES · {QUERY_TIMEOUT_MS / 1000} s LIMIT</span>
       </div>
 
