@@ -38,13 +38,37 @@ data**.
 
 | Check | Result |
 |---|---|
-| Development suite, headless (`npm run evals`, prebuild gate) | 147 / 147 at `5f3864f` (12 categories, all targets met) |
+| Development suite, headless (`npm run evals`, prebuild gate) | 147 / 147 at `5f3864f`; 148 / 148 after CR-006 (12 categories, all targets met) |
 | CI dry run on a fresh clone with the exact CI arguments (`ops/deploy-check/ci-local.mjs`) | Pass at `79d97bc` |
 | Agent run locally (`wrangler dev`, Durable Objects, no Workers AI) | Health reports pinned model, fingerprint and Worker version; T1 answered with citations and an audit entry; T2 validated template (3 rows); change request declined without a query; raw `DELETE` rejected; `WITH RECURSIVE` rejected; review recorded as a REVIEW entry; forged `T1` event refused; `monitor` instance returns 404 over HTTP; audit ledger verified server-side and independently in the browser |
 | Self-check inside the agent | Development suite PASS (137 cases at the time); determinism probe skipped (no AI binding locally) |
 | Browser, full stack against the local agent | Auto-connects to the agent; answers, reviews, OOS workflow start/complete/approval recorded in the server ledger; browser and agent configuration fingerprints identical |
 | Workers AI adapter | Verified against a recording stand-in: pinned model id, temperature 0, seed, max tokens; off when disabled or unbound (6 / 6) |
-| Real Workers AI call on Cloudflare | **Not performed** — no deployment credentials in this session (DEV-011) |
+| Real Workers AI call on Cloudflare | Performed after deployment — see §3a |
+
+## 3a. Deployment verification (27 Sep 2026)
+
+Deployed by the AI assistant with the account owner's `wrangler` login, tagged with the commit (as CI
+would). Record: `validation/deployment/2026-09-27-153bc9c.json`.
+
+| Check (IQ) | Expected | Result |
+|---|---|---|
+| `GET /api/health` → Worker version tag | release commit `153bc9c` | `153bc9c` ✓ |
+| Configuration fingerprint | validated `87cf3b53…` | `87cf3b53…` ✓ |
+| Model | `@cf/meta/llama-3.3-70b-instruct-fp8-fast`, available | pinned, available ✓ |
+| Identity | `cloudflare-access` for GMP use | `unverified` — **Access not configured** (R-13 open) |
+| Monitor instance over HTTP | 404 | 404 ✓ |
+| App and published eval results served | 200 | 200 ✓ |
+
+| Check (OQ, live model) | Result |
+|---|---|
+| Self-check on Cloudflare (development suite inside the agent + determinism probe) | 147 / 147 PASS; probe: **identical output twice, citation check passed**; completed in ≈ 5 s within the account's CPU limits |
+| T1 through the model (3 answerable, 2 off-corpus) | 3 answered with code-checked citations in 2–7 s; 2 UNDECIDED without calling the model (≈ 70 ms) |
+| Superseded version | Model relied on SOP-QA-0102 §7.3 and stated v2.1 §7.1 does not apply; the evidence list also showed an uncited section and the superseded passage unmarked → CR-006 |
+| T2 without a template | Model-drafted SELECT executed read-only, flagged `validated: false`; its logic (spec range per method) is questionable — exactly why it is labelled unvalidated (R-08) |
+| T2 with a template / change request | Template used without calling the model; change request declined with no query |
+| T3 through the model | Explanation cited SOP-QA-0102 §6.4 L2, CAL-2411 and INV-2024-031 (record-id check passed); out-of-scope question declined |
+| Server ledger | 10 entries, chain verified |
 
 ## 4. Acceptance test VR-20260927-79d97bc (TP-001, first execution)
 
@@ -92,8 +116,9 @@ features, wrong question: calibration is not servicing.
 | DEV-008 | AC-4 failed: "overdue" also returned instruments due soon; "which batches have samples registered?" matched no template. | Genuine template defects. | CR-002, CR-003 (implemented). |
 | DEV-009 | AC-5 failed: "expire" vs "expired" not matched; "ruled out" not understood. | Stemmer defect; missing phrase. | CR-004 (implemented); "ruled out" under CR-001. |
 | DEV-010 | During agent smoke testing, before the formal run, a triage question close to an HT-001 case ("When did INS-114 calibration expire?") was seen to fail. | Deliberately not fixed before the run, to keep HT-001 independent; disclosed here. The formal run confirmed it (DEV-009). | None beyond CR-004. |
-| DEV-011 | The Workers AI path was not exercised on Cloudflare. | Adapter verified with a stand-in; the real model's wording, determinism and latency are unmeasured. | IQ/OQ after deployment: health check, determinism probe, a sample of reviewed answers. |
-| DEV-012 | The daily self-check may exceed Workers Free plan CPU limits. | Self-check would be cut short; monitoring gap. | Verify on deployment; use Workers Paid or split the check. |
+| DEV-011 | The Workers AI path was not exercised on Cloudflare before deployment. | **Closed 27 Sep 2026** by the deployment verification (§3a): live model answers passed the code checks; determinism probe identical. A reviewed sample of answers by users is still part of operation (OP-001 §4). | Closed |
+| DEV-012 | The daily self-check might exceed platform CPU limits. | **Closed 27 Sep 2026**: the self-check completed on Cloudflare in ≈ 5 s (§3a). Re-check if the suite grows or the plan changes. | Closed |
+| DEV-013 | For model answers the evidence list showed every chunk of a cited document, including an uncited section and an unmarked superseded passage (found in §3a). | Display defect in a non-critical path; the answer text itself was correct. | CR-006 (implemented). |
 
 ## 6. Change requests after the acceptance run
 
@@ -108,6 +133,7 @@ labelled INFORMATIONAL.
 | CR-003 | Listing questions reach the listing templates | `c3bdcff` | Regression case added |
 | CR-004 | Stemmer: "expire" ~ "expired" | `c3bdcff` | Regression case added |
 | CR-005 | Complete the function-word list (auxiliaries, pronouns, prepositions; not quantifiers or negation) | `d2fe349`, `07df8d0` | Regression case added |
+| CR-006 | Model answers list only the sections the model cited (document + version + section); superseded passages marked "not relied on" | this release | Regression case added (development suite 148 / 148) |
 
 | Informational run on HT-001 (not acceptance evidence) | Sensitivity | Specificity | T2 | T3 |
 |---|---|---|---|---|
@@ -122,9 +148,9 @@ labelled INFORMATIONAL.
 2. Decide and implement CR-001; close DEV-006 and DEV-007.
 3. Have an independent SME write and verify HT-002 (sized per DEV-003), freeze it, and execute TP-001.
 4. Measure the manual process baseline (DEV-004).
-5. Deploy to the organisation's Cloudflare account behind **Cloudflare Access** (closes R-13), complete
-   IQ (health check shows release commit, validated fingerprint, pinned model, `identity:
-   cloudflare-access`) and the model OQ (DEV-011, DEV-012).
+5. Put the deployment behind **Cloudflare Access** and set `ACCESS_TEAM_DOMAIN` / `ACCESS_AUD` (closes
+   R-13), then repeat the IQ so `/api/health` reports `identity: cloudflare-access`. (The model OQ,
+   DEV-011 and DEV-012, is done — §3a.)
 6. For any real GMP data: supplier assessment of Cloudflare and the model, data-residency controls or
    an on-premises model (R-17); decide whether AI-drafted queries stay enabled (R-08).
 7. Train users on their human-in-the-loop responsibilities (IU-001 §5) and start monitoring reviews.

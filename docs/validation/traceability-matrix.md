@@ -20,7 +20,7 @@ and in the agent's daily self-check) · **HT/AC:** held-out acceptance criterion
 | URS-005 | Effective version only; conflict shown | FS-01, FS-03 | R-02 | DEV superseded (2/2) | Verified |
 | URS-006 | No generative AI in the OOS record | FS-09 | R-05 | DEV workflow (fixed findings), modelpath "step findings stay fixed text with a model loaded" | Verified |
 | URS-007 | AI text labelled, shown with its source | FS-04, FS-06 | R-01, R-08 | REVIEW (UI labels); SMOKE | Verified by review |
-| URS-008 | Model output checked in code; withheld otherwise | FS-04, FS-09 | R-01, R-06 | DEV citations (8/8), modelpath (14/14), adapter (6/6) | Verified (scripted model); real model: IQ/OQ pending |
+| URS-008 | Model output checked in code; withheld otherwise | FS-04, FS-09 | R-01, R-06 | DEV citations (8/8), modelpath (15/15), adapter (6/6); live OQ with the pinned model (VR-001 §3a) | Verified |
 | URS-009 | Human verdicts recorded and aggregated | FS-10, FS-13 | R-01 | SMOKE (review → REVIEW entry, monitor counters) | Verified |
 | URS-010 | No write path; engine read-only | FS-07, FS-08 | R-07 | DEV sqlguard (17/17), readonly (5/5, node and agent) | Verified |
 | URS-011 | Change requests declined | FS-05 | R-07 | DEV nl2sql; HT change requests (3/3) | Verified |
@@ -30,11 +30,11 @@ and in the agent's daily self-check) · **HT/AC:** held-out acceptance criterion
 | URS-015 | Audit trail content | FS-10, FS-14 | R-11 | DEV audit (6/6); SMOKE (entry fields) | Verified |
 | URS-016 | Agent writes its own entries; client kinds restricted | FS-10 | R-11 | SMOKE (forged `T1` event refused) | Verified |
 | URS-017 | Tamper-evident, independently verifiable, exportable | FS-10 | R-11, R-12 | DEV audit (edit, delete, reorder, re-hash detected); browser verify + tamper test + export | Verified |
-| URS-018 | Verified identity or "(unverified)" | FS-11 | R-13 | REVIEW; IQ with Access | **Not verified** — needs Access (R-13) |
+| URS-018 | Verified identity or "(unverified)" | FS-11 | R-13 | REVIEW; IQ shows `identity: unverified` (no Access yet) | **Not verified** — needs Access (R-13) |
 | URS-019 | Model and settings pinned | FS-12, FS-14 | R-14 | DEV adapter (pinned id, temperature 0, seed) | Verified |
 | URS-020 | Fingerprint recorded and compared; commits shown | FS-14 | R-14, R-20 | SMOKE (browser = agent fingerprint); Compliance tab | Verified |
 | URS-021 | Deterministic fallback with a note | FS-12 | — | SMOKE (agent without AI binding answers deterministically) | Partially verified (budget path: REVIEW) |
-| URS-022 | Monitoring, drift, daily self-check | FS-13 | R-14, R-15, R-16 | SMOKE (self-check run in the agent: suite PASS; counters) | Verified locally; determinism probe pending deployment |
+| URS-022 | Monitoring, drift, daily self-check | FS-13 | R-14, R-15, R-16 | Self-check on Cloudflare: suite 147/147, determinism probe identical (VR-001 §3a) | Verified |
 | URS-023 | Rate and budget limits | FS-15, FS-12 | R-18 | REVIEW | Not tested |
 | URS-024 | Works with nothing to install | FS-16 | — | Browser test (Pages mirror / local) | Verified |
 | URS-025 | Held-out acceptance testing controls | FS-17 | R-19 | Lock + access log + consumed guard exercised (VR-20260927-79d97bc and INFO runs) | Controls verified; independence **not met** (DEV-001, DEV-005) |

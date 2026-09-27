@@ -251,6 +251,7 @@ export default function AssistantTab() {
             <div key={i} style={css("background:#F7F8F7;border:1px solid #D9DDDB;border-radius:4px;padding:9px 11px;display:flex;flex-direction:column;gap:5px")}>
               <div style={css("display:flex;align-items:center;gap:6px")}>
                 <span style={css("font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;color:#0A4F47")}>{c.doc}</span>
+                {c.status === "SUPERSEDED" && <span title="Mentioned for comparison only — the effective version governs" style={css("font-family:'IBM Plex Mono',monospace;font-size:8.5px;font-weight:600;padding:1px 5px;border-radius:2px;background:#F4E3E1;color:#A33025")}>SUPERSEDED — NOT RELIED ON</span>}
                 <span style={css("flex:1")} />
                 <span style={css("font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#71807B")}>rel {c.score.toFixed(2)}</span>
               </div>

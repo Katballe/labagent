@@ -88,10 +88,16 @@ export async function answerQuestion({ question, threshold = DEFAULT_THRESHOLD, 
   if (!check.ok) {
     return refuse(`The model's answer was withheld because ${check.reason}. Citations are checked in code, not trusted to the model.`, { reason: "citation-check", withheld: text });
   }
-  return {
-    ...base, decision: "ANSWERED", refused: false, conflict: r.conflict, text, model: llm.label,
-    cites: r.chunks.filter((c) => check.cited.includes(baseDoc(c.doc))).map(citeOf(question)),
-  };
+  // CR-006: show the passages the model actually cited — document (with version)
+  // and section — rather than every chunk of a cited document. If it cited
+  // documents without sections, fall back to their effective passages.
+  const norm = text.replace(/\s+/g, " ");
+  const bySection = r.chunks.filter((c) => {
+    const s = (c.sec.match(/§\s*[\d.]+/) || [""])[0].replace(/\s+/g, "");
+    return s && norm.includes(`${c.doc} ${s}`);
+  });
+  const used = bySection.length ? bySection : r.chunks.filter((c) => check.cited.includes(baseDoc(c.doc)) && c.status !== "SUPERSEDED");
+  return { ...base, decision: "ANSWERED", refused: false, conflict: r.conflict, text, model: llm.label, cites: used.map(citeOf(question)) };
 }
 
 // ---- Tier 2: data questions → read-only SQL ---------------------------------

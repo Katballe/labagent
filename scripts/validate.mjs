@@ -1,8 +1,12 @@
 // Acceptance test against the frozen held-out set — test plan TP-001
 // (docs/validation/test-plan.md), EU GMP Annex 22 §4–§7 (draft).
 //
-//   node scripts/validate.mjs --freeze              record the held-out set's hash (once)
-//   node scripts/validate.mjs --purpose "<why>"     run the acceptance test
+//   node scripts/validate.mjs [--set HT-002] --freeze            record a held-out set's hash (once)
+//   node scripts/validate.mjs [--set HT-002] --purpose "<why>"   run the acceptance test
+//
+// HT-001 lives in src/evals/heldout.js (lock validation/heldout.lock.json).
+// Later sets: src/evals/heldout-HT-nnn.js, lock validation/heldout-HT-nnn.lock.json,
+// same exports as heldout.js.
 //
 // A run: checks the set against its lock, appends to the test-data access log,
 // runs every case through the production pipeline (deterministic mode),
@@ -17,16 +21,20 @@ import { createHash } from "node:crypto";
 import initSqlJs from "sql.js";
 import { seedDatabase, execSelect } from "../src/ai/sqlcore.js";
 import { runSuite } from "../src/evals/runner.js";
-import * as HELDOUT from "../src/evals/heldout.js";
 import { configFingerprint, APP_VERSION } from "../src/compliance/config.js";
 import { PROMPT_VERSION } from "../src/ai/prompts.js";
 
 const root = new URL("../", import.meta.url);
-const file = "src/evals/heldout.js";
-const lockPath = new URL("validation/heldout.lock.json", root);
-const logPath = new URL("validation/test-data-access.log", root);
 const args = process.argv.slice(2);
 const arg = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
+const setId = arg("--set") || "HT-001";
+if (!/^HT-\d{3}$/.test(setId)) { console.error("--set must be a held-out set id like HT-002"); process.exit(2); }
+const file = setId === "HT-001" ? "src/evals/heldout.js" : `src/evals/heldout-${setId}.js`;
+const lockPath = new URL(setId === "HT-001" ? "validation/heldout.lock.json" : `validation/heldout-${setId}.lock.json`, root);
+const logPath = new URL("validation/test-data-access.log", root);
+if (!existsSync(new URL(file, root))) { console.error(`No held-out file ${file}`); process.exit(2); }
+const HELDOUT = await import(new URL(file, root).href);
+if (HELDOUT.ID !== setId) { console.error(`${file} declares ID ${HELDOUT.ID}, expected ${setId}`); process.exit(2); }
 const sh = (cmd) => { try { return execSync(cmd, { stdio: ["ignore", "pipe", "ignore"], cwd: root }).toString().trim(); } catch { return ""; } };
 
 // Line endings are normalised so a Windows checkout hashes like CI's.

@@ -1,0 +1,289 @@
+{
+  "record": "IQ/OQ after first deployment",
+  "system": "labagent Worker",
+  "deployedBy": "Claude (AI assistant) via wrangler OAuth of the account owner",
+  "deployedCommit": "153bc9c",
+  "iq": {
+    "health": {
+      "service": "labagent-agent",
+      "ok": true,
+      "app": "2.0.0",
+      "prompt": "v2.0.0",
+      "llm": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "modelLabel": "Llama 3.3 70B (Workers AI)",
+      "config": "87cf3b53df4c136b6b86c7ba8bd41518b827a05caba4a0f2c3312298dac3f7f4",
+      "worker": {
+        "id": "a93821ad-1dfe-4036-8c72-9165130222fa",
+        "tag": "153bc9c",
+        "timestamp": "2026-09-27T13:38:56.699411Z"
+      },
+      "identity": "unverified"
+    },
+    "checks": {
+      "tagMatchesCommit": true,
+      "fingerprintMatchesValidated": true,
+      "modelPinned": true,
+      "llmAvailable": true,
+      "identity": "unverified"
+    }
+  },
+  "oq": {
+    "liveApi": {
+      "session": "s-62deccebf7f96e8ececf5537",
+      "at": "2026-09-27T13:39:32.771Z",
+      "t1": [
+        {
+          "q": "What's the acceptance criterion for dissolution in method MV-0412?",
+          "status": 200,
+          "ms": 3067,
+          "decision": "ANSWERED",
+          "mode": "generative",
+          "engine": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "cites": [
+            "SOP-AM-0412 §6.2",
+            "SOP-AM-0412 §5.4"
+          ],
+          "withheld": false,
+          "note": null,
+          "text": "The acceptance criterion for dissolution in method MV-0412 is: Q = 80% of label claim dissolved at 30 min, n = 6 units, with no individual unit below Q − 5% (SOP-AM-0412 §6.2). On failure, the test extends to Stage 2 (n = 12 additional units) per USP <711> (SOP-AM-0412 §6.2).",
+          "auditId": "AUD-00001"
+        },
+        {
+          "q": "What is the retest policy after an OOS result?",
+          "status": 200,
+          "ms": 1938,
+          "decision": "ANSWERED",
+          "mode": "generative",
+          "engine": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "cites": [
+            "SOP-QA-0102 §7.3",
+            "SOP-QA-0102 v2.1 §7.1",
+            "SOP-QA-0102 §6.4"
+          ],
+          "withheld": false,
+          "note": null,
+          "text": "Retesting shall be performed only against a documented laboratory-error hypothesis and with QA pre-approval (SOP-QA-0102 §7.3). The retest can be from the original preparation for instrument/measurement error, or a new preparation for preparation error (SOP-QA-0102 §7.3). Note that the EFFECTIVE version of the SOP is preferred, and the superseded version (SOP-QA-0102 v2.1 §7.1) is not applicable. Retest results do not invalidate the original OOS result (SOP-QA-0102 §7.3).",
+          "auditId": "AUD-00002"
+        },
+        {
+          "q": "How do I check the scales before weighing?",
+          "status": 200,
+          "ms": 6616,
+          "decision": "ANSWERED",
+          "mode": "generative",
+          "engine": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "cites": [
+            "SOP-EQ-0040 §4.2",
+            "SOP-EQ-0031 §4.1"
+          ],
+          "withheld": false,
+          "note": null,
+          "text": "To check the scales before weighing, perform a level check, zero check, and a two-point verification with certified weights bracketing the working range, with a tolerance of ±0.1% of nominal (SOP-EQ-0040 §4.2). Record the results in the balance logbook before use (SOP-EQ-0040 §4.2). This is part of the daily verification for balances, categorized as Category A (SOP-EQ-0031 §4.1).",
+          "auditId": "AUD-00003"
+        },
+        {
+          "q": "What is the capital of France?",
+          "status": 200,
+          "ms": 76,
+          "decision": "UNDECIDED",
+          "reason": "unknown-subject",
+          "mode": "generative",
+          "engine": "deterministic",
+          "cites": [],
+          "withheld": false,
+          "note": null,
+          "text": "I can't answer this from the validated corpus: it doesn't mention “capital”, “france”, so any answer would be a guess.",
+          "auditId": "AUD-00004"
+        },
+        {
+          "q": "What's the acceptance criterion for dissolution on the moon?",
+          "status": 200,
+          "ms": 71,
+          "decision": "UNDECIDED",
+          "reason": "unknown-subject",
+          "mode": "generative",
+          "engine": "deterministic",
+          "cites": [],
+          "withheld": false,
+          "note": null,
+          "text": "I can't answer this from the validated corpus: it doesn't mention “moon”, so any answer would be a guess.",
+          "auditId": "AUD-00005"
+        }
+      ],
+      "t2": [
+        {
+          "q": "Which method has the widest specification range?",
+          "status": 200,
+          "ms": 777,
+          "ok": true,
+          "source": "model",
+          "validated": false,
+          "rows": 1,
+          "sql": "SELECT method_id FROM results GROUP BY method_id ORDER BY MAX(spec_high) - MIN(spec_low) DESC LIMIT 1",
+          "note": "1 row · read-only · executed against synthetic SQLite · UNVALIDATED query drafted by AI — informational only; verify before using it for any GMP decision",
+          "auditId": "AUD-00006"
+        },
+        {
+          "q": "Show me all out-of-spec results for batch B-2291 in the last 30 days",
+          "status": 200,
+          "ms": 89,
+          "ok": true,
+          "source": "template",
+          "validated": true,
+          "rows": 2,
+          "sql": "SELECT r.result_id, s.sample_id, s.batch_id, r.method_id, r.instrument_id, r.analyst_id,\n       r.value, r.unit, r.spec_text,\n       CASE WHEN r.oos_flag = 1 THEN 'OOS' ELSE 'PASS' END AS outcome, r.run_ts\nFROM results r\nJOIN samples s ON s.sample_id = r.sample_id\nWHERE r.oos_flag = 1\n  AND s.batch_id = 'B-2291'\n  AND r.run_ts >= date('2026-07-12', '-30 day')\nORDER BY r.run_ts DESC",
+          "note": "2 rows · read-only · executed against synthetic SQLite",
+          "auditId": "AUD-00007"
+        },
+        {
+          "q": "Delete all OOS results",
+          "status": 200,
+          "ms": 77,
+          "ok": false,
+          "source": "none",
+          "validated": false,
+          "rows": 0,
+          "sql": "-- No query generated: the request asks to change data.",
+          "note": "LabAgent is read-only: it can look records up, but it can't change, delete or approve anything — and neither can any query it runs. Changes to LIMS records go through the LIMS itself, by an authorised person.",
+          "auditId": "AUD-00008"
+        }
+      ],
+      "t3": [
+        {
+          "q": "Why is this classified as probable lab error?",
+          "status": 200,
+          "ms": 2440,
+          "decision": "ANSWERED",
+          "mode": "generative",
+          "withheld": false,
+          "text": "The classification as probable lab error is based on the decision tree in SOP-QA-0102 §6.4, specifically branch L2, which indicates that when the instrument is outside its calibration interval at run time, it should be classified as probable laboratory error pending retest. This is supported by the fact that the instrument INS-114 was out of calibration at the time of the run (SOP-EQ-0031 §4.1, instruments/INS-114 · calibrations/CAL-2411), and the presence of a similar historical investigation (INV-2024-031) that concluded with a lab error due to an out-of-calibration detector.",
+          "auditId": "AUD-00009"
+        },
+        {
+          "q": "Should the product be recalled?",
+          "status": 200,
+          "ms": 517,
+          "decision": "UNDECIDED",
+          "mode": "generative",
+          "withheld": false,
+          "text": "I can only discuss the evidence gathered in this workflow's steps and the SOPs it cites — I don't speculate beyond it. Try asking about the classification, INS-114's calibration, the analyst, the batch, or what happens on approval.",
+          "auditId": "AUD-00010"
+        }
+      ],
+      "audit": {
+        "entries": 10,
+        "verification": {
+          "ok": true,
+          "checked": 10
+        },
+        "kinds": [
+          "AUD-00001 T1 @cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "AUD-00002 T1 @cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "AUD-00003 T1 @cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "AUD-00004 T1 deterministic",
+          "AUD-00005 T1 deterministic",
+          "AUD-00006 T2 @cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "AUD-00007 T2 deterministic",
+          "AUD-00008 T2 deterministic",
+          "AUD-00009 T3 @cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "AUD-00010 T3 @cf/meta/llama-3.3-70b-instruct-fp8-fast"
+        ]
+      }
+    },
+    "selfCheck": {
+      "at": "2026-09-27T13:40:22.869Z",
+      "config": "87cf3b53df4c136b6b86c7ba8bd41518b827a05caba4a0f2c3312298dac3f7f4",
+      "worker": {
+        "id": "a93821ad-1dfe-4036-8c72-9165130222fa",
+        "tag": "153bc9c"
+      },
+      "suite": {
+        "passed": true,
+        "total": 147,
+        "failed": [],
+        "categories": [
+          {
+            "key": "factual",
+            "passed": 26,
+            "n": 26,
+            "pass": true
+          },
+          {
+            "key": "refusal",
+            "passed": 15,
+            "n": 15,
+            "pass": true
+          },
+          {
+            "key": "superseded",
+            "passed": 2,
+            "n": 2,
+            "pass": true
+          },
+          {
+            "key": "citations",
+            "passed": 8,
+            "n": 8,
+            "pass": true
+          },
+          {
+            "key": "sqlguard",
+            "passed": 17,
+            "n": 17,
+            "pass": true
+          },
+          {
+            "key": "readonly",
+            "passed": 5,
+            "n": 5,
+            "pass": true
+          },
+          {
+            "key": "nl2sql",
+            "passed": 20,
+            "n": 20,
+            "pass": true
+          },
+          {
+            "key": "workflow",
+            "passed": 18,
+            "n": 18,
+            "pass": true
+          },
+          {
+            "key": "integrity",
+            "passed": 10,
+            "n": 10,
+            "pass": true
+          },
+          {
+            "key": "audit",
+            "passed": 6,
+            "n": 6,
+            "pass": true
+          },
+          {
+            "key": "adapter",
+            "passed": 6,
+            "n": 6,
+            "pass": true
+          },
+          {
+            "key": "modelpath",
+            "passed": 14,
+            "n": 14,
+            "pass": true
+          }
+        ]
+      },
+      "determinism": {
+        "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+        "identical": true,
+        "cited": true,
+        "decisionA": "ANSWERED",
+        "decisionB": "ANSWERED"
+      }
+    }
+  }
+}

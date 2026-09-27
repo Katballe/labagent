@@ -84,6 +84,10 @@ async function modelPath(c, exec) {
   if (c.kind === "qa") {
     res = await answerQuestion({ question: c.q, llm });
     got = res.withheld ? "withheld" : res.refused ? "refused" : "answered";
+    if (c.cites && got === "answered") {
+      const shown = res.cites.map((x) => `${x.doc} ${x.sec.split(" ")[0]}`);
+      if (shown.length !== c.cites.length || !c.cites.every((x) => shown.includes(x))) got += ` (cited ${shown.join(", ")})`;
+    }
   } else if (c.kind === "sql") {
     res = await runDataQuery({ question: c.q, exec, llm });
     got = res.ok ? `rows:${res.rows.length}` : res.rejected ? "rejected" : res.refused ? "refused" : "noquery";

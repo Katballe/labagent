@@ -153,6 +153,7 @@ export const NL2SQL = [
 const DISSOLUTION_Q = "What's the acceptance criterion for dissolution in method MV-0412?";
 export const MODEL_PATH = [
   { kind: "qa", name: "grounded, cited answer is shown", q: DISSOLUTION_Q, reply: "Stage 1 requires Q = 80% at 30 minutes, n = 6 (SOP-AM-0412 §6.2).", expect: "answered" },
+  { kind: "qa", name: "CR-006: only the sections the model cited are shown as its sources", q: "What is the retest policy after an OOS result?", reply: "Retesting needs a documented laboratory-error hypothesis and QA pre-approval (SOP-QA-0102 §7.3); the superseded SOP-QA-0102 v2.1 §7.1 no longer applies.", expect: "answered", cites: ["SOP-QA-0102 §7.3", "SOP-QA-0102 v2.1 §7.1"] },
   { kind: "qa", name: "answer without a citation is withheld", q: DISSOLUTION_Q, reply: "Stage 1 requires Q = 80% at 30 minutes.", expect: "withheld" },
   { kind: "qa", name: "fabricated citation is withheld", q: DISSOLUTION_Q, reply: "Per SOP-AM-0999 §2, Q = 80%.", expect: "withheld" },
   { kind: "qa", name: "the model's own INSUFFICIENT_EVIDENCE is honoured", q: DISSOLUTION_Q, reply: "INSUFFICIENT_EVIDENCE", expect: "refused" },
