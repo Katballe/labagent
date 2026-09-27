@@ -22,12 +22,10 @@ import { SCHEMA_DOC } from "../data/seed.js";
 import { OOS_CASE } from "../data/dataset.js";
 import { T1_SYSTEM, t1User, T2_SYSTEM, t2User, T3_TRIAGE_SYSTEM, t3TriageUser } from "./prompts.js";
 import { GENERATION, DEFAULT_THRESHOLD } from "../compliance/config.js";
+import { isWorklist, dataRoutable, openItems, explainRefusal } from "./route.js";
 
 const gen = (maxTokens) => ({ temperature: GENERATION.temperature, seed: GENERATION.seed, maxTokens });
 const stripFences = (s) => (s || "").replace(/```(?:sql)?/gi, "").replace(/```/g, "").trim();
-
-// Questions about live records (a batch, a sample, an instrument's status today) belong to the database.
-const DATA_ID = /\b(?:[SBAR]-\d{3,5}|CAL-\d{4}|INS-\d{3})\b|\btoday\b|\bright now\b/i;
 
 // Explainability (Annex 22 §8): which words of the question each passage matched.
 function matchedWords(question, chunk) {
@@ -49,8 +47,7 @@ export async function answerQuestion({ question, threshold = DEFAULT_THRESHOLD, 
 
   if (r.unknown.length) {
     const what = r.unknown.map((w) => `“${w}”`).join(", ");
-    const hint = DATA_ID.test(question) ? " Records such as samples, batches and results live in the database — try the Data query tab." : "";
-    return refuse(`I can't answer this from the validated corpus: it doesn't mention ${what}, so any answer would be a guess.${hint}`, { reason: "unknown-subject", unknown: r.unknown });
+    return refuse(`I can't answer this from the validated corpus: it doesn't mention ${what}, so any answer would be a guess.`, { reason: "unknown-subject", unknown: r.unknown });
   }
   if (!r.chunks.length || r.confidence < threshold) {
     return refuse(
@@ -98,6 +95,37 @@ export async function answerQuestion({ question, threshold = DEFAULT_THRESHOLD, 
   });
   const used = bySection.length ? bySection : r.chunks.filter((c) => check.cited.includes(baseDoc(c.doc)) && c.status !== "SUPERSEDED");
   return { ...base, decision: "ANSWERED", refused: false, conflict: r.conflict, text, model: llm.label, cites: used.map(citeOf(question)) };
+}
+
+// ---- Document QA entry point (CR-007) ----------------------------------------
+/**
+ * What the Document QA tab calls. Worklist questions ("what should I
+ * prioritise?", "any open issues?") get the open-items view; everything else
+ * goes to the SOP path first. When that refuses and the question is purely
+ * about database records, the matching validated template answers instead
+ * (never a model-drafted query). Returns the SOP result with kind "sop", or
+ * { kind: "worklist" | "data", ... }.
+ */
+export async function ask({ question, threshold = DEFAULT_THRESHOLD, llm = null, exec, guard = {}, onToken }) {
+  const validate = (sql) => validateSelect(sql, guard);
+  if (exec && isWorklist(question)) {
+    const w = await openItems({ exec, validate });
+    onToken?.(w.text);
+    return { ...w, route: "worklist", confidence: null, threshold };
+  }
+  const res = await answerQuestion({ question, threshold, llm, onToken });
+  if (!res.refused || !exec) return { kind: "sop", ...res };
+  if (dataRoutable(question)) {
+    const q = await runDataQuery({ question, llm: null, exec, guard });
+    if (q.ok && q.validated) {
+      const text = q.rows.length
+        ? `The SOPs don't hold this, but the LIMS extract does — ${q.rows.length} record${q.rows.length === 1 ? "" : "s"} from the validated query “${q.template}”.`
+        : `The SOPs don't hold this, and the validated query “${q.template}” found no matching records in the LIMS extract.`;
+      onToken?.(text);
+      return { ...q, kind: "data", route: "sop-refused → validated template", decision: "ANSWERED", refused: false, text, confidence: res.confidence, threshold, sop: { reason: res.reason, unknown: res.unknown || [] } };
+    }
+  }
+  return { kind: "sop", ...res, text: explainRefusal(res, question) };
 }
 
 // ---- Tier 2: data questions → read-only SQL ---------------------------------

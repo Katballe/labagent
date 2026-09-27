@@ -17,13 +17,15 @@ function localLlm() {
   return { label: engine.label(), chat: (o) => engine.chat(o) };
 }
 
+// Document QA: SOP answers, plus (CR-007) the open-items view for worklist
+// questions and validated database look-ups for questions the SOPs can't hold.
 export async function answerQuestion({ question, threshold, reviewer, onToken }) {
   if (onCloud()) {
     const res = await cloud.ask({ question, threshold, reviewer });
     onToken?.(res.text);
-    return res;
+    return { kind: "sop", ...res };
   }
-  return P.answerQuestion({ question, threshold, llm: localLlm(), onToken });
+  return P.ask({ question, threshold, llm: localLlm(), exec: runSelect, onToken });
 }
 
 export async function runDataQuery({ question, reviewer }) {

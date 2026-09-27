@@ -14,6 +14,7 @@ export const CATEGORIES = [
   { key: "readonly", label: "Engine-level read-only", tier: "T2", target: 1, note: "SQLite itself refuses writes, even past the guard", env: ["node", "agent"] },
   { key: "timeout", label: "Runaway query stopped", tier: "T2", target: 1, note: "an endless query is killed after 3 s and the database recovers", env: "browser" },
   { key: "nl2sql", label: "Data questions → records", tier: "T2", target: 0.9, note: "returns exactly the expected records, or declines" },
+  { key: "routing", label: "Document QA routing (CR-007)", tier: "T1→T2", target: 1, note: "open-work questions get the open-items view; database-only questions a validated query; SOP and off-topic questions unchanged" },
   { key: "workflow", label: "OOS workflow & triage", tier: "T3", target: 1, note: "fixed steps; triage answers from gathered evidence or declines" },
   { key: "integrity", label: "Records & corpus integrity", tier: "data", target: 1, note: "every cited document and record exists; workflow facts match the database" },
   { key: "audit", label: "Audit chain", tier: "AT", target: 1, note: "verifies when intact; detects edits, removals and reordering" },
@@ -145,6 +146,26 @@ export const NL2SQL = [
   { q: "show results", ids: null },
   { q: "Delete all OOS results for batch B-2291", ids: null, refusedWrite: true },
   { q: "Set the calibration status of INS-114 to IN CAL", ids: null, refusedWrite: true },
+];
+
+// CR-007 regressions. The first four are the questions from user testing on
+// 27 Sep 2026 that the Document QA refused; the rest guard the boundaries.
+// expect: worklist | data | sop (answered from the SOPs) | refused | not-worklist
+export const ROUTING = [
+  { q: "What should i prioritize", expect: "worklist", has: ["R-30117", "R-30102", "INS-114", "A-114"] },
+  { q: "any issues", expect: "worklist" },
+  { q: "Any open issues", expect: "worklist" },
+  { q: "What's the shelf life of batch B-2291?", expect: "refused", text: "LIMS extract" },
+  { q: "What needs my attention today?", expect: "worklist" },
+  { q: "Is INS-114 in calibration today?", expect: "data", template: "calibration status of instruments", col: "instrument_id", ids: ["INS-114"] },
+  { q: "Show OOS results for batch B-2291", expect: "data", template: "out-of-specification results", col: "result_id", ids: ["R-30102", "R-30117"] },
+  { q: "What were the results for batch B-9999?", expect: "data", col: "result_id", ids: [] },
+  { q: "What is the retest policy after an OOS result?", expect: "sop" },
+  { q: "What's the acceptance criterion for dissolution in method MV-0412?", expect: "sop" },
+  { q: "What issues must a Phase 1 investigation report address?", expect: "not-worklist" },
+  { q: "What does an HPLC column cost?", expect: "refused" },
+  { q: "What is the salary of analyst A-207?", expect: "refused" },
+  { q: "Where is the stability data for batch B-2290?", expect: "refused" },
 ];
 
 // T3 triage — expect an answer containing `has`, or a refusal.

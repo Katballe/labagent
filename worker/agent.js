@@ -141,7 +141,24 @@ export class LabAgent extends Agent {
     const question = clip(body.question, 500).trim();
     if (!question) return { error: "empty question" };
     const threshold = Math.min(0.9, Math.max(0.3, Number(body.threshold) || DEFAULT_THRESHOLD));
-    const { res, llm, note } = await this.withModel((m) => P.answerQuestion({ question, threshold, llm: m }));
+    // CR-007: worklist questions and database-only questions are answered from
+    // validated read-only queries; everything else goes through the SOP path.
+    const { res, llm, note } = await this.withModel((m) => P.ask({ question, threshold, llm: m, exec: execReadOnly, guard: GUARD }));
+    if (res.kind !== "sop") {
+      const queries = res.kind === "worklist"
+        ? res.sections.map((s) => ({ key: s.key, sql: s.sql, rows: s.rows.length, error: s.error || null }))
+        : [{ template: res.template, sql: res.sql, rows: res.rows.length }];
+      const summary = res.kind === "worklist"
+        ? `open items — ${res.sections.map((s) => `${s.key} ${s.rows.length}`).join(", ")}`
+        : `SOPs refused (${res.sop.reason}) → validated template “${res.template}”, ${res.rows.length} row(s)`;
+      const entry = await this.append({
+        actor: who.actor, kind: "T1", action: `QA: "${clip(question, 56)}" — ${summary}`,
+        model: "deterministic", prompt: PROMPT_VERSION,
+        content: await this.context({ question, route: res.route, decision: res.decision, answer: res.text, queries, actorVerified: who.verified }),
+      });
+      await this.report({ kind: "t1", decision: res.decision, reason: res.route, generative: false });
+      return { ...res, auditId: entry.id, engine: "deterministic", note };
+    }
     const outcome = res.refused ? `UNDECIDED (${res.reason})` : `answered, ${res.cites.length} citation(s): ${res.cites.map((c) => c.doc).join(", ")}${res.conflict ? " · conflict surfaced" : ""}`;
     const entry = await this.append({
       actor: who.actor, kind: "T1", action: `QA: "${clip(question, 56)}" — ${outcome}`,

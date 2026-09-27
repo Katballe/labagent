@@ -36,6 +36,7 @@ and in the agent's daily self-check) · **HT/AC:** held-out acceptance criterion
 | URS-021 | Deterministic fallback with a note | FS-12 | — | SMOKE (agent without AI binding answers deterministically) | Partially verified (budget path: REVIEW) |
 | URS-022 | Monitoring, drift, daily self-check | FS-13 | R-14, R-15, R-16 | Self-check on Cloudflare: suite 147/147, determinism probe identical (VR-001 §3a) | Verified |
 | URS-023 | Rate and budget limits | FS-15, FS-12 | R-18 | REVIEW | Not tested |
+| URS-027 | Open-work and record questions answered from validated queries | FS-18 | R-21 | DEV routing (14/14) | Verified in the development suite; open-items content awaits SME approval |
 | URS-024 | Works with nothing to install | FS-16 | — | Browser test (Pages mirror / local) | Verified |
 | URS-025 | Held-out acceptance testing controls | FS-17 | R-19 | Lock + access log + consumed guard exercised (VR-20260927-79d97bc and INFO runs) | Controls verified; independence **not met** (DEV-001, DEV-005) |
 | URS-026 | Build gate | FS-17 | — | CI dry run (`ci-local.mjs`), `prebuild` | Verified |

@@ -39,6 +39,7 @@ compliance or reliable operation, L = business/usability. Each requirement is ve
 | URS-011 | Requests to change data shall be declined without generating or running a query. | H | Data integrity |
 | URS-012 | Where a validated query template applies, it shall be used. A model may draft a query only where no template applies; such results shall be labelled unvalidated and informational only. | H | Annex 22 §1; Annex 11 |
 | URS-013 | Queries shall not be able to exhaust the system: the browser stops a query after 3 s; the agent refuses recursive queries and caps returned rows. | M | Availability |
+| URS-027 | In the Document QA, questions about open work ("what should I prioritise?") and questions the SOPs can't answer but that are purely about LIMS records shall be answered from validated read-only query templates — never a model-drafted query — and labelled as coming from the LIMS extract. A question about data the LIMS extract doesn't hold shall be refused with that reason. (CR-007) | M | User testing, 27 Sep 2026 (DEV-014) |
 
 ## 4. OOS Phase 1 workflow (F3)
 

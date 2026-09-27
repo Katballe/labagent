@@ -7,7 +7,8 @@ import { answerQuestion } from "../ai/labagent.js";
 const INTRO =
   "LabAgent is ready. Ask about the SOPs: every answer cites the controlled passage it comes from, and when the corpus doesn't hold the answer the outcome is “undecided” rather than a guess. " +
   "With the Cloudflare agent (or a local model) the wording is AI-written and marked as such — check it against the verbatim source on the right and record your verdict. " +
-  "In instant mode the answer is the verbatim source itself. Either way this is a look-up aid: the controlled SOP governs.";
+  "In instant mode the answer is the verbatim source itself. Either way this is a look-up aid: the controlled SOP governs. " +
+  "Questions about open work (“what should I prioritise?”) get a read-only list of open items, and questions only the LIMS extract can answer get its records from a validated query.";
 
 const REFUSAL_BADGE = {
   "unknown-subject": "REFUSED — NOT IN CORPUS",
@@ -40,6 +41,54 @@ function useEntities() {
     CORPUS.filter((c) => c.status !== "SUPERSEDED").forEach((c) => list.push({ id: c.id, label: c.title }));
     return list;
   }, []);
+}
+
+// CR-007: answers that come from the LIMS extract instead of the SOPs.
+function Records({ cols, rows, max = 12 }) {
+  if (!rows?.length) return <div style={css("font-size:11.5px;color:#71807B")}>No matching records.</div>;
+  return (
+    <div style={css("overflow-x:auto;max-width:720px;border:1px solid #D9DDDB;border-radius:4px;background:#fff")}>
+      <table style={css("border-collapse:collapse;font-size:11px;width:100%")}>
+        <thead>
+          <tr>{cols.map((c) => <th key={c} style={css(`${mono};font-size:9.5px;font-weight:600;text-align:left;padding:5px 8px;background:#EFF1F0;color:#5A6663;border-bottom:1px solid #D9DDDB;white-space:nowrap`)}>{c}</th>)}</tr>
+        </thead>
+        <tbody>
+          {rows.slice(0, max).map((r, i) => (
+            <tr key={i}>{r.map((v, j) => <td key={j} style={css(`${j === 0 ? mono + ";font-weight:600;" : ""}padding:5px 8px;border-bottom:1px solid #EFF1F0;white-space:nowrap;color:#1C2422`)}>{v == null ? "—" : String(v)}</td>)}</tr>
+          ))}
+        </tbody>
+      </table>
+      {rows.length > max && <div style={css("font-size:10.5px;color:#71807B;padding:4px 8px")}>… {rows.length - max} more — open the Data query tab for all rows.</div>}
+    </div>
+  );
+}
+
+function Sql({ sql, label = "Show the query" }) {
+  return (
+    <details style={css("font-size:11px;color:#5A6663;max-width:720px")}>
+      <summary style={css("cursor:pointer")}>{label}</summary>
+      <pre style={css(`${mono};font-size:10.5px;margin:6px 0 0;padding:8px 10px;background:#F7F8F7;border-left:2px solid #B9D2CD;white-space:pre-wrap`)}>{sql}</pre>
+    </details>
+  );
+}
+
+function Worklist({ sections }) {
+  return (
+    <div style={css("display:flex;flex-direction:column;gap:12px;max-width:720px")}>
+      {sections.map((s, i) => (
+        <div key={s.key} style={css("display:flex;flex-direction:column;gap:5px")}>
+          <div style={css("display:flex;align-items:baseline;gap:8px")}>
+            <span style={css(`${mono};font-size:10px;color:#71807B`)}>{i + 1}</span>
+            <span style={css("font-weight:600;font-size:12.5px")}>{s.title}</span>
+            <span style={css(`${mono};font-size:10px;padding:1px 6px;border-radius:3px;${s.rows.length ? "background:#F8F0DE;color:#6E5410;border:1px solid #E0CD9E" : "background:#E6E9E7;color:#5A6663"}`)}>{s.rows.length}</span>
+          </div>
+          <div style={css("font-size:11.5px;color:#5A6663")}>{s.why}</div>
+          {s.error ? <div style={css("font-size:11.5px;color:#A33025")}>{s.error}</div> : s.rows.length > 0 && <Records cols={s.cols} rows={s.rows} max={8} />}
+          <Sql sql={s.sql} />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 let msgSeq = 0;
@@ -91,13 +140,21 @@ export default function AssistantTab() {
         reviewer,
         onToken: (d) => setMessages((m) => m.map((x) => (x.id === aid ? { ...x, text: x.text + d } : x))),
       });
+      const kind = res.kind || "sop";
       const audId = await logResult(
         res,
         "T1",
-        res.refused
+        kind === "worklist"
+          ? `QA: "${q.slice(0, 56)}" — open items — ${res.sections.map((s) => `${s.key} ${s.rows.length}`).join(", ")}`
+          : kind === "data"
+          ? `QA: "${q.slice(0, 56)}" — SOPs refused (${res.sop.reason}) → validated template “${res.template}”, ${res.rows.length} row(s)`
+          : res.refused
           ? `QA: "${q.slice(0, 56)}" — UNDECIDED (${res.reason})`
           : `QA: "${q.slice(0, 56)}" — answered, ${res.cites.length} citation(s): ${res.cites.map((c) => c.doc).join(", ")}${res.conflict ? " · conflict surfaced" : ""}`,
-        JSON.stringify({
+        kind !== "sop" ? JSON.stringify({
+          question: q, route: res.route, decision: res.decision, answer: res.text,
+          queries: kind === "worklist" ? res.sections.map((s) => ({ key: s.key, sql: s.sql, rows: s.rows.length })) : [{ template: res.template, sql: res.sql, rows: res.rows.length }],
+        }) : JSON.stringify({
           question: q, decision: res.decision, reason: res.reason || null, answer: res.text, withheld: res.withheld || null,
           confidence: +res.confidence.toFixed(3), threshold, retrieved: res.retrieved,
           cited: res.cites.map(({ doc, sec, score, matched }) => ({ doc, sec, score: +score.toFixed(3), matched })), model: res.model || null,
@@ -108,8 +165,13 @@ export default function AssistantTab() {
           x.id === aid
             ? {
                 ...x, streaming: false, text: res.text, refusal: res.refused, reason: res.reason, withheld: res.withheld, conflict: res.conflict,
-                cites: res.cites, generative: res.mode === "generative" && !res.refused, audId, note: res.note,
-                meta: `${res.decision || (res.refused ? "UNDECIDED" : "ANSWERED")} · retrieval confidence ${res.confidence.toFixed(2)} (threshold ${threshold.toFixed(2)}) · ${res.engine || eng.label} · ${audId}`,
+                cites: res.cites || [], generative: kind === "sop" && res.mode === "generative" && !res.refused, audId, note: res.note,
+                kind, sections: res.sections, cols: res.cols, rows: res.rows, sql: res.sql, template: res.template,
+                meta: kind === "worklist"
+                  ? `ANSWERED · open items · ${res.sections.length} validated read-only queries · as of ${res.asOf} · deterministic · ${audId}`
+                  : kind === "data"
+                  ? `ANSWERED · SOPs don't hold it (${res.sop.reason}) → validated template “${res.template}” · deterministic · ${audId}`
+                  : `${res.decision || (res.refused ? "UNDECIDED" : "ANSWERED")} · retrieval confidence ${res.confidence.toFixed(2)} (threshold ${threshold.toFixed(2)}) · ${res.engine || eng.label} · ${audId}`,
               }
             : x
         )
@@ -167,10 +229,19 @@ export default function AssistantTab() {
               <div key={m.id} style={css(`display:flex;flex-direction:column;gap:7px;padding:14px 18px;background:${user ? "#EFF1F0" : "#FFFFFF"};border-bottom:1px solid #E6E9E7`)}>
                 <div style={css("display:flex;align-items:center;gap:8px")}>
                   <span style={css(`font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:.06em;color:${user ? "#71807B" : "#0A4F47"}`)}>{user ? `YOU · ${(m.who || reviewer).toUpperCase()}` : "LABAGENT"}</span>
+                  {m.kind === "worklist" && <span style={css(`${mono};font-size:9px;font-weight:600;padding:2px 7px;border-radius:3px;background:#E4EEEC;color:#0A4F47;border:1px solid #B9D2CD`)}>OPEN ITEMS · LIMS EXTRACT · READ-ONLY</span>}
+                  {m.kind === "data" && <span style={css(`${mono};font-size:9px;font-weight:600;padding:2px 7px;border-radius:3px;background:#E4EEEC;color:#0A4F47;border:1px solid #B9D2CD`)}>FROM THE LIMS · VALIDATED QUERY</span>}
                   {m.refusal && <span style={css("font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;padding:2px 7px;border-radius:3px;background:#F4E3E1;color:#A33025;border:1px solid #DCB4AF")}>{REFUSAL_BADGE[m.reason] || "REFUSED"}</span>}
                 </div>
                 {m.conflict && <div style={css("font-size:11.5px;line-height:1.55;padding:8px 10px;background:#F8F0DE;border:1px solid #E0CD9E;border-radius:4px;color:#6E5410")}>⚠ {m.conflict}</div>}
                 <div style={css("font-size:13px;line-height:1.6;max-width:720px;white-space:pre-wrap")}>{m.text}{m.streaming && <span style={css("animation:la-pulse 1.2s infinite")}>▍</span>}</div>
+                {m.kind === "worklist" && m.sections && <Worklist sections={m.sections} />}
+                {m.kind === "data" && m.rows && (
+                  <>
+                    <Records cols={m.cols} rows={m.rows} />
+                    <Sql sql={m.sql} label={`Show the validated query (${m.template})`} />
+                  </>
+                )}
                 {m.withheld && (
                   <details style={css("font-size:11.5px;color:#5A6663;max-width:720px")}>
                     <summary style={css("cursor:pointer")}>Show the withheld model output (not relied upon)</summary>
@@ -191,7 +262,7 @@ export default function AssistantTab() {
                 )}
                 {m.note && <div style={css("font-size:10.5px;color:#5A6663;max-width:720px")}>{m.note}</div>}
                 {m.meta && <div style={css(`${mono};font-size:9.5px;color:#9AA6A2`)}>{m.meta}</div>}
-                {!m.refusal && m.audId && !m.streaming && (
+                {!m.refusal && m.audId && !m.streaming && (m.kind || "sop") === "sop" && (
                   <div style={css("display:flex;align-items:center;gap:6px;font-size:10.5px;color:#5A6663")}>
                     {m.verdict ? (
                       <span style={css(`${mono};font-size:9.5px;color:${m.verdict === "confirmed" ? "#1E6E43" : "#A33025"}`)}>

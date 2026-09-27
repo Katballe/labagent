@@ -10,7 +10,8 @@
 // so a confusion matrix can be computed (EU GMP Annex 22 §4.1, draft).
 
 import * as DEV from "./cases.js";
-import { answerQuestion, runDataQuery, stepFinding, triageAnswer } from "../ai/pipeline.js";
+import { answerQuestion, ask, runDataQuery, stepFinding, triageAnswer } from "../ai/pipeline.js";
+import { OPEN_ITEMS } from "../ai/route.js";
 import { checkDocCitations, checkRecordIds, baseDoc, DOC_ID, RECORD_ID } from "../ai/citations.js";
 import { validateSelect } from "../ai/sqlcore.js";
 import { CORPUS, OOS_CASE, OOS_STEPS, OOS_DRAFT, SUGGESTED } from "../data/dataset.js";
@@ -71,6 +72,29 @@ async function nl2sql(c, exec, llm) {
   return { pass: setEq(got, c.ids), group: c.group, detail: `${c.col}: ${got.join(", ") || "none"}${r.validated ? "" : " (unvalidated)"}` };
 }
 
+// CR-007: which way the Document QA answers, and with what.
+async function routing(c, exec) {
+  const r = await ask({ question: c.q, exec });
+  const got = r.kind === "sop" ? (r.refused ? "refused" : "sop") : r.kind;
+  let pass = c.expect === "not-worklist" ? got !== "worklist" : got === c.expect;
+  let detail = got === "data" ? `data · ${r.template}` : got;
+  if (pass && c.has) {
+    const listed = JSON.stringify(r.sections.map((s) => s.rows));
+    const missing = c.has.filter((id) => !listed.includes(id));
+    pass = !missing.length;
+    detail += missing.length ? `; missing ${missing.join(", ")}` : `; lists ${c.has.join(", ")}`;
+  }
+  if (pass && c.template) { pass = r.template === c.template; }
+  if (pass && c.ids) {
+    const i = r.cols.indexOf(c.col);
+    const ids = uniq(r.rows.map((row) => row[i]));
+    pass = setEq(ids, c.ids);
+    detail += `; ${c.col}: ${ids.join(", ") || "none"}`;
+  }
+  if (pass && c.text) { pass = r.text.includes(c.text); if (!pass) detail += `; text lacks “${c.text}”`; }
+  return { pass, detail };
+}
+
 // The model path, driven by a scripted stand-in: `reply` is what the "model" says.
 function scripted(reply) {
   const llm = { label: "scripted-model", calls: 0, chat: async ({ onToken }) => { llm.calls++; onToken?.(reply); return reply; } };
@@ -128,6 +152,7 @@ async function integrity(exec) {
     ...OOS_STEPS.flatMap((s) => [s.task, s.finding, ...(s.evidence || []).flatMap((e) => [e.ref, e.detail])]),
     ...OOS_DRAFT.sections.flatMap((s) => [s.t, s.cite]),
     OOS_CASE.trigger,
+    ...OPEN_ITEMS.map((o) => o.why), // CR-007: the open-items explanations cite SOPs too
   ].join("\n");
   const docRefs = uniq((shown.match(DOC_ID) || []).map(baseDoc)).filter((d) => d !== draftId);
   const missingDocs = docRefs.filter((d) => !corpusIds.includes(d));
@@ -237,6 +262,7 @@ export async function runSuite(env) {
     return { pass: stopped && recovered, detail: `${stopped ? `stopped after ${secs} s` : msg}; database ${recovered ? "recovered" : "did NOT recover"}` };
   });
   (S.NL2SQL || []).forEach((c) => job("nl2sql", c.q, () => nl2sql(c, env.exec, llm)));
+  (S.ROUTING || []).forEach((c) => job("routing", c.q, () => routing(c, env.exec)));
   if (want.has("workflow")) {
     const steps = OOS_STEPS.map((s) => ({ ...s }));
     if (S === DEV) for (const step of OOS_STEPS) {

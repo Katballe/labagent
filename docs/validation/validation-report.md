@@ -38,7 +38,7 @@ data**.
 
 | Check | Result |
 |---|---|
-| Development suite, headless (`npm run evals`, prebuild gate) | 147 / 147 at `5f3864f`; 148 / 148 after CR-006 (12 categories, all targets met) |
+| Development suite, headless (`npm run evals`, prebuild gate) | 147 / 147 at `5f3864f`; 148 / 148 after CR-006 (12 categories, all targets met); 162 / 162 after CR-007 (13 categories — new: Document QA routing, 14 cases) |
 | CI dry run on a fresh clone with the exact CI arguments (`ops/deploy-check/ci-local.mjs`) | Pass at `79d97bc` |
 | Agent run locally (`wrangler dev`, Durable Objects, no Workers AI) | Health reports pinned model, fingerprint and Worker version; T1 answered with citations and an audit entry; T2 validated template (3 rows); change request declined without a query; raw `DELETE` rejected; `WITH RECURSIVE` rejected; review recorded as a REVIEW entry; forged `T1` event refused; `monitor` instance returns 404 over HTTP; audit ledger verified server-side and independently in the browser |
 | Self-check inside the agent | Development suite PASS (137 cases at the time); determinism probe skipped (no AI binding locally) |
@@ -118,6 +118,7 @@ features, wrong question: calibration is not servicing.
 | DEV-010 | During agent smoke testing, before the formal run, a triage question close to an HT-001 case ("When did INS-114 calibration expire?") was seen to fail. | Deliberately not fixed before the run, to keep HT-001 independent; disclosed here. The formal run confirmed it (DEV-009). | None beyond CR-004. |
 | DEV-011 | The Workers AI path was not exercised on Cloudflare before deployment. | **Closed 27 Sep 2026** by the deployment verification (§3a): live model answers passed the code checks; determinism probe identical. A reviewed sample of answers by users is still part of operation (OP-001 §4). | Closed |
 | DEV-012 | The daily self-check might exceed platform CPU limits. | **Closed 27 Sep 2026**: the self-check completed on Cloudflare in ≈ 5 s (§3a). Re-check if the suite grows or the plan changes. | Closed |
+| DEV-014 | User testing (27 Sep 2026, instant mode): "What should i prioritize", "any issues" and "Any open issues" were refused as not in the corpus; "What's the shelf life of batch B-2291?" was refused (correctly — no source holds shelf life) but its hint sent the user to the Data query tab, which can't answer it either. | The Document QA only searched the SOPs, while these are questions about current records. The shelf-life hint was misleading. No wrong answer was given. | CR-007 (implemented). |
 | DEV-013 | For model answers the evidence list showed every chunk of a cited document, including an uncited section and an unmarked superseded passage (found in §3a). | Display defect in a non-critical path; the answer text itself was correct. | CR-006 (implemented). |
 
 ## 6. Change requests after the acceptance run
@@ -133,6 +134,7 @@ labelled INFORMATIONAL.
 | CR-003 | Listing questions reach the listing templates | `c3bdcff` | Regression case added |
 | CR-004 | Stemmer: "expire" ~ "expired" | `c3bdcff` | Regression case added |
 | CR-005 | Complete the function-word list (auxiliaries, pronouns, prepositions; not quantifiers or negation) | `d2fe349`, `07df8d0` | Regression case added |
+| CR-007 | Document QA routing: open-work questions → read-only open-items view (four validated queries, fixed order, SOP basis quoted); questions the SOPs can't answer that are purely about LIMS records → the matching validated template; refusals about records say the LIMS extract doesn't hold it either. SOP-path decisions unchanged. | this release | 14 regression cases added (development suite 162 / 162) |
 | CR-006 | Model answers list only the sections the model cited (document + version + section); superseded passages marked "not relied on" | this release | Regression case added (development suite 148 / 148) |
 
 | Informational run on HT-001 (not acceptance evidence) | Sensitivity | Specificity | T2 | T3 |
@@ -145,7 +147,7 @@ labelled INFORMATIONAL.
 ## 7. Required actions before release
 
 1. Assign the roles in VP-001 §4 and approve IU-001, URS-001, FS-001, RA-001, VP-001, TP-001.
-2. Decide and implement CR-001; close DEV-006 and DEV-007.
+2. Decide and implement CR-001; close DEV-006 and DEV-007. Approve the CR-007 open-items view (queries, explanations, display order).
 3. Have an independent SME write and verify HT-002 (sized per DEV-003), freeze it, and execute TP-001.
 4. Measure the manual process baseline (DEV-004).
 5. Put the deployment behind **Cloudflare Access** and set `ACCESS_TEAM_DOMAIN` / `ACCESS_AUD` (closes
