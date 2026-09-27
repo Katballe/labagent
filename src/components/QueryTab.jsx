@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { css } from "../lib/css.js";
 import { useApp } from "../state/store.jsx";
 import { QUERIES } from "../data/dataset.js";
-import { runDataQuery } from "../ai/labagent.js";
+import { runDataQuery, onCloud } from "../ai/labagent.js";
+import { cloud } from "../ai/cloud.js";
 import { runSelect, validateSelect, QUERY_TIMEOUT_MS, ROW_LIMIT, NOW } from "../ai/db.js";
 
 const mono = "font-family:'IBM Plex Mono',monospace";
@@ -26,7 +27,7 @@ const SQL_TRIES = [
 ];
 
 export default function QueryTab() {
-  const { addAudit, engine: eng } = useApp();
+  const { addAudit, logResult, engine: eng, reviewer } = useApp();
   const [mode, setMode] = useState("ask"); // ask | sql
   const [qInput, setQInput] = useState("");
   const [sqlInput, setSqlInput] = useState(SQL_TRIES[0].sql);
@@ -40,9 +41,10 @@ export default function QueryTab() {
     setThinking(true);
     setResult(null);
     try {
-      const res = await runDataQuery({ question: q });
-      const outcome = res.ok ? `${res.rows.length} row(s), read-only` : res.refused ? "declined — asks to change data" : res.rejected ? "REJECTED by read-only guard" : res.error ? "error / stopped" : "no query generated";
-      setAudId(await addAudit("T2", `Query: "${q.slice(0, 56)}" — ${outcome}`, `Q: ${q}\n\nSQL:\n${res.sql}\n\n${res.note}`));
+      const res = await runDataQuery({ question: q, reviewer });
+      const outcome = res.ok ? `${res.rows.length} row(s), read-only${res.validated ? "" : ", UNVALIDATED query"}` : res.refused ? "declined — asks to change data" : res.rejected ? "REJECTED by read-only guard" : res.error ? "error / stopped" : "no query generated";
+      setAudId(await logResult(res, "T2", `Query: "${q.slice(0, 56)}" — ${outcome}`,
+        JSON.stringify({ question: q, source: res.source, validated: res.validated, template: res.template || null, sql: res.sql, rows: res.ok ? res.rows.length : 0, note: res.note })));
       setResult(res);
     } catch (e) {
       setResult({ ok: false, sql: "", cols: [], rows: [], note: "Engine error: " + e.message, error: true });
@@ -56,6 +58,17 @@ export default function QueryTab() {
     if (!sql || thinking) return;
     setThinking(true);
     setResult(null);
+    if (onCloud()) {
+      try {
+        const res = await cloud.sql({ sql, reviewer });
+        setAudId(await logResult(res));
+        setResult(res);
+      } catch (e) {
+        setResult({ ok: false, sql, cols: [], rows: [], note: "Agent error: " + e.message, error: true });
+      }
+      setThinking(false);
+      return;
+    }
     const v = validateSelect(sql);
     let res;
     if (!v.ok) {
@@ -93,8 +106,8 @@ export default function QueryTab() {
           <div style={css("display:flex")}>{tabBtn("ask", "Ask in English")}{tabBtn("sql", "Write SQL yourself")}</div>
           <span style={css("font-size:11px;color:#71807B")}>
             {mode === "ask"
-              ? (eng.instant ? "Instant mode matches your question to a fixed query template." : `${eng.label} writes the SQL; the guard checks it before it runs.`)
-              : "Try to break it: anything that isn't a single read-only query is refused."}
+              ? (eng.instant || (eng.cloud && !eng.modelId) ? "Your question is matched to a validated query template." : "Validated templates first; if none fits, the AI drafts a query that is labelled unvalidated.")
+              : `Try to break it: anything that isn't a single read-only query is refused${eng.cloud ? " (the agent also refuses recursive queries)" : ""}.`}
           </span>
         </div>
         {mode === "ask" ? (
@@ -133,7 +146,11 @@ export default function QueryTab() {
         {result && (
           <div style={css("display:flex;flex-direction:column;gap:12px;max-width:1100px")}>
             <div style={css("display:flex;flex-direction:column;gap:6px")}>
-              <div style={css(`${mono};font-size:10px;font-weight:600;color:#5A6663;letter-spacing:.05em`)}>SQL — LOGGED VERBATIM · {audId}{result.how ? ` · ${result.how}` : ""}</div>
+              <div style={css("display:flex;align-items:center;gap:8px")}>
+                <span style={css(`${mono};font-size:10px;font-weight:600;color:#5A6663;letter-spacing:.05em`)}>SQL — LOGGED VERBATIM · {audId}{result.how ? ` · ${result.how}` : ""}</span>
+                {result.source === "template" && <span title="A fixed query template covered by the test suite" style={css(`${mono};font-size:9px;font-weight:600;padding:2px 7px;border-radius:3px;background:#DCEFE2;color:#1E6E43`)}>VALIDATED TEMPLATE</span>}
+                {result.source === "model" && <span title="Written by the AI model: informational only, not validated (Annex 22 — non-critical use)" style={css(`${mono};font-size:9px;font-weight:600;padding:2px 7px;border-radius:3px;background:#F8F0DE;color:#6E5410;border:1px solid #E0CD9E`)}>UNVALIDATED · AI-WRITTEN</span>}
+              </div>
               <pre style={css(`margin:0;background:#1C2422;color:#C9E4DE;${mono};font-size:11.5px;line-height:1.6;padding:13px 15px;border-radius:5px;overflow-x:auto`)}>{result.sql}</pre>
             </div>
 

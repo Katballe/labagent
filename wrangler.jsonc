@@ -1,0 +1,33 @@
+// LabAgent on Cloudflare: the built app (./dist) + the LabAgent agent (worker/).
+// Configuration is under change control — see docs/validation/functional-spec.md §6.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "labagent",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/agents/*"]
+  },
+  "ai": { "binding": "AI" },
+  "durable_objects": {
+    "bindings": [{ "name": "LabAgent", "class_name": "LabAgent" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["LabAgent"] }],
+  "ratelimits": [
+    { "name": "RATE_LIMIT", "namespace_id": "2026092701", "simple": { "limit": 30, "period": 60 } }
+  ],
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
+  "vars": {
+    // Workers AI calls per UTC day before the agent answers deterministically.
+    "LLM_DAILY_CAP": "1500",
+    "LLM_ENABLED": "true",
+    // Set both to trust Cloudflare Access identities (see worker/access.js).
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": ""
+  },
+  "observability": { "enabled": true }
+}

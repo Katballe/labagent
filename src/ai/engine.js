@@ -1,15 +1,19 @@
-// Answer engine. Three backends, one interface:
-//   • "instant" — the default. No language model: answers are verbatim quotes
-//                 from the corpus, data questions map onto fixed query templates,
-//                 and the OOS workflow uses its fixed step texts. Nothing to
-//                 download, works in every browser, fully deterministic.
-//   • "webllm"  — a quantized LLM running 100% in this browser via WebGPU.
-//                 Weights download once from Hugging Face, then are cached.
-//   • "ollama"  — a local Ollama server (http://localhost:11434) for bigger models.
+// Answer engine. Four backends, one interface:
+//   • "cloud"   — the default where it is deployed: the LabAgent Cloudflare
+//                 agent (worker/) runs the pipeline server-side with a pinned
+//                 Workers AI model and keeps the authoritative audit trail.
+//   • "instant" — no language model, in the browser: verbatim quotes, fixed
+//                 query templates, fixed OOS findings. Nothing to download,
+//                 works offline and in every browser, fully deterministic.
+//                 Used when the agent isn't reachable (e.g. the Pages mirror).
+//   • "webllm"  — a quantized LLM running in this browser via WebGPU.
+//   • "ollama"  — a local Ollama server (http://localhost:11434).
 //
 // Instant mode is always available: while a model downloads (or if it fails),
-// the app keeps answering in instant mode. The rest of the app only calls
-// engine.chat() and reads the snapshot; guard rails are applied outside it.
+// the app keeps answering in instant mode. Guard rails are applied outside the
+// engine (src/ai/pipeline.js), identically for every backend.
+
+import { health } from "./cloud.js";
 
 export const MODELS = [
   {
@@ -40,6 +44,7 @@ export const OLLAMA_URL = "http://localhost:11434";
 
 export function engineLabel(backend, modelId) {
   if (backend === "instant") return "instant (no model)";
+  if (backend === "cloud") return modelId ? `cloudflare agent · ${String(modelId).replace(/^@cf\//, "")}` : "cloudflare agent · deterministic";
   if (backend === "ollama") return `ollama:${modelId}`;
   return String(modelId || "").replace(/-MLC$/, "");
 }
@@ -56,6 +61,7 @@ class Engine {
     this.error = null; // last load error (instant mode keeps working)
     this.errorFor = null; // which backend that error belongs to
     this._webllm = null; // MLCEngine instance
+    this.cloudInfo = null; // /api/health of the agent, once reached
     this._loadSeq = 0;
     this._listeners = new Set();
     this._rebuild();
@@ -73,6 +79,8 @@ class Engine {
       modelId: this.modelId,
       label: engineLabel(this.backend, this.modelId),
       instant: this.backend === "instant",
+      cloud: this.backend === "cloud",
+      cloudInfo: this.cloudInfo,
       loading: this.loading,
       error: this.error,
       errorFor: this.errorFor,
@@ -112,8 +120,29 @@ class Engine {
     this._emit();
   }
 
+  /** Connect to the Cloudflare agent. Resolves true if it is reachable. */
+  async connectCloud({ quiet = false } = {}) {
+    const seq = ++this._loadSeq;
+    if (!quiet) { this.error = null; this.loading = { backend: "cloud", text: "Connecting to the LabAgent agent…", pct: null }; this._emit(); }
+    const info = await health();
+    if (seq !== this._loadSeq) return false;
+    this.loading = null;
+    if (!info) {
+      if (!quiet) { this.error = "cloud-unreachable"; this.errorFor = "cloud"; }
+      this._emit();
+      return false;
+    }
+    this.cloudInfo = info;
+    this.backend = "cloud";
+    this.modelId = info.llm ? info.model : null;
+    this.error = null;
+    this._emit();
+    return true;
+  }
+
   async load(backend, modelId) {
     if (backend === "instant") return this.switchToInstant();
+    if (backend === "cloud") return this.connectCloud();
     const seq = ++this._loadSeq;
     const stale = () => seq !== this._loadSeq;
     this.error = null;
@@ -181,13 +210,13 @@ class Engine {
 
   // messages: [{role, content}]. Returns the full assistant string; onToken(delta)
   // fires as text streams in.
-  async chat({ messages, temperature = 0.2, maxTokens = 700, onToken }) {
-    if (this.backend === "instant") throw new Error("Instant mode has no language model.");
-    if (this.backend === "ollama") return this._ollamaChat({ messages, temperature, maxTokens, onToken });
+  async chat({ messages, temperature = 0, seed, maxTokens = 700, onToken }) {
+    if (this.backend === "instant" || this.backend === "cloud") throw new Error("No local language model is active.");
+    if (this.backend === "ollama") return this._ollamaChat({ messages, temperature, seed, maxTokens, onToken });
     if (!this._webllm) throw new Error("Model not loaded.");
 
     const generate = async () => {
-      const stream = await this._webllm.chat.completions.create({ messages, temperature, max_tokens: maxTokens, stream: true });
+      const stream = await this._webllm.chat.completions.create({ messages, temperature, seed, max_tokens: maxTokens, stream: true });
       let out = "";
       for await (const chunk of stream) {
         const delta = chunk?.choices?.[0]?.delta?.content || "";
@@ -209,11 +238,11 @@ class Engine {
     }
   }
 
-  async _ollamaChat({ messages, temperature, maxTokens, onToken }) {
+  async _ollamaChat({ messages, temperature, seed, maxTokens, onToken }) {
     const res = await fetch(`${OLLAMA_URL}/api/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: this.modelId, messages, stream: true, options: { temperature, num_predict: maxTokens } }),
+      body: JSON.stringify({ model: this.modelId, messages, stream: true, options: { temperature, seed, num_predict: maxTokens } }),
     });
     if (!res.ok || !res.body) throw new Error("Ollama chat failed: " + res.status);
     const reader = res.body.getReader();

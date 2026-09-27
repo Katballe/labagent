@@ -10,6 +10,7 @@ import QueryTab from "./components/QueryTab.jsx";
 import OosTab from "./components/OosTab.jsx";
 import AuditTab from "./components/AuditTab.jsx";
 import EvalsTab from "./components/EvalsTab.jsx";
+import ComplianceTab from "./components/ComplianceTab.jsx";
 
 const NAV = [
   { key: "assistant", chip: "T1", label: "Assistant", sub: "Document QA · cite or refuse" },
@@ -17,6 +18,7 @@ const NAV = [
   { key: "oos", chip: "T3", label: "OOS triage", sub: "Phase 1 workflow" },
   { key: "audit", chip: "AT", label: "Audit trail", sub: "Hash-chained log" },
   { key: "evals", chip: "EV", label: "Evals", sub: "Measured, not claimed" },
+  { key: "compliance", chip: "CO", label: "Compliance", sub: "Annex 22 · monitoring" },
 ];
 
 const mono = "font-family:'IBM Plex Mono',monospace";
@@ -45,8 +47,8 @@ function EngineChip() {
   const { engine: eng, setEngineOpen } = useApp();
   const loading = eng.loading;
   return (
-    <button onClick={() => setEngineOpen(true)} title="Choose how LabAgent answers: instant mode (no download) or a local AI model" style={css(`display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:4px;border:1px solid #3C4A46;background:#2A3532;color:#D5DEDB;cursor:pointer;${mono};font-size:10.5px`)}>
-      <span style={{ ...css("width:7px;height:7px;border-radius:50%"), background: loading ? "#E0B44C" : eng.instant ? "#7BD4B8" : "#6FB3FF" }} />
+    <button onClick={() => setEngineOpen(true)} title="Choose how LabAgent answers: the Cloudflare agent, instant mode (offline, no download) or a local AI model" style={css(`display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:4px;border:1px solid #3C4A46;background:#2A3532;color:#D5DEDB;cursor:pointer;${mono};font-size:10.5px`)}>
+      <span style={{ ...css("width:7px;height:7px;border-radius:50%"), background: loading ? "#E0B44C" : eng.cloud ? "#F6A04D" : eng.instant ? "#7BD4B8" : "#6FB3FF" }} />
       <span>engine <span style={css("color:#fff;font-weight:600")}>{eng.label}</span></span>
       {loading && <span style={css("color:#E0B44C")}>· loading {loading.pct != null ? `${loading.pct}%` : "…"}</span>}
       <span style={css("color:#8FA39D")}>▾ change</span>
@@ -55,6 +57,7 @@ function EngineChip() {
 }
 
 function TopBar() {
+  const { engine: eng } = useApp();
   return (
     <div style={css("height:50px;flex:none;display:flex;align-items:center;gap:14px;padding:0 16px;background:#1C2422;color:#E8ECEA;border-bottom:2px solid #0F6E63")}>
       <div style={css("display:flex;align-items:baseline;gap:8px")}>
@@ -63,7 +66,9 @@ function TopBar() {
       </div>
       <div style={css(`display:flex;align-items:center;gap:6px;${mono};font-size:10px`)}>
         <span style={css("padding:3px 8px;background:#0F6E63;color:#E8ECEA;border-radius:3px;font-weight:600")}>READ-ONLY</span>
-        <span title="Everything runs in this browser tab; nothing you type is sent anywhere" style={css("padding:3px 8px;background:#2A3532;color:#AFC0BB;border-radius:3px")}>100% ON-DEVICE</span>
+        {eng.cloud
+          ? <span title="Questions are answered by the LabAgent agent on Cloudflare (synthetic data only)" style={css("padding:3px 8px;background:#2A3532;color:#F6C08A;border-radius:3px")}>CLOUDFLARE AGENT</span>
+          : <span title="Everything runs in this browser tab; nothing you type is sent anywhere" style={css("padding:3px 8px;background:#2A3532;color:#AFC0BB;border-radius:3px")}>100% ON-DEVICE</span>}
       </div>
       <div style={css("flex:1")} />
       <div style={css(`display:flex;align-items:center;gap:14px;${mono};font-size:10.5px;color:#8FA39D`)}>
@@ -118,6 +123,7 @@ function Shell() {
         {tab === "oos" && <OosTab />}
         {tab === "audit" && <AuditTab />}
         {tab === "evals" && <EvalsTab />}
+        {tab === "compliance" && <ComplianceTab />}
       </div>
       <EngineDialog />
     </div>

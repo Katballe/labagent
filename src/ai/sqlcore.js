@@ -33,13 +33,17 @@ function scan(sql) {
 const WRITE_WORDS = /\b(insert|update|delete|drop|alter|create|attach|detach|pragma|vacuum|reindex|truncate|begin|commit|rollback|savepoint|release)\b|\breplace\s+into\b|\bor\s+replace\b/i;
 
 // Validate a statement is a single, read-only SELECT. Returns {ok, sql} or {ok:false, reason}.
-export function validateSelect(sql) {
+// The Cloudflare agent also passes { allowRecursive: false }: it can't kill a
+// runaway query the way the browser can (by terminating its worker), so
+// recursion — never needed for LIMS look-ups — is refused up front there.
+export function validateSelect(sql, { allowRecursive = true } = {}) {
   const { exec, skel } = scan(String(sql ?? ""));
   const body = skel.replace(/;\s*$/, "");
   if (!body) return { ok: false, reason: "empty statement" };
   if (body.includes(";")) return { ok: false, reason: "multiple statements are not allowed" };
   if (!/^(select|with)\b/i.test(body)) return { ok: false, reason: "only SELECT queries are permitted" };
   if (WRITE_WORDS.test(body)) return { ok: false, reason: "write/DDL keywords are forbidden" };
+  if (!allowRecursive && /\brecursive\b/i.test(body)) return { ok: false, reason: "recursive queries are not allowed" };
   return { ok: true, sql: exec.replace(/;\s*$/, "") };
 }
 
@@ -61,8 +65,8 @@ export function seedDatabase(SQL) {
 }
 
 /** Validate, then execute. Returns { cols, rows }; throws on rejection or SQL error. */
-export function execSelect(db, sql) {
-  const v = validateSelect(sql);
+export function execSelect(db, sql, opts) {
+  const v = validateSelect(sql, opts);
   if (!v.ok) throw new Error("Rejected: " + v.reason);
   const res = db.exec(v.sql);
   if (!res.length) return { cols: [], rows: [] };

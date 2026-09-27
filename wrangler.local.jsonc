@@ -1,0 +1,27 @@
+// Local run of the full app + agent WITHOUT Workers AI, which always needs a
+// Cloudflare login even in `wrangler dev`. The agent then answers
+// deterministically, exercising everything except the model call itself.
+//   npm run agent:local      (builds, then serves http://localhost:8788)
+// Keep bindings in step with wrangler.jsonc (minus "ai").
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "labagent",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/agents/*"]
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "LabAgent", "class_name": "LabAgent" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["LabAgent"] }],
+  "ratelimits": [
+    { "name": "RATE_LIMIT", "namespace_id": "2026092702", "simple": { "limit": 30, "period": 60 } }
+  ],
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
+  "vars": { "LLM_DAILY_CAP": "1500", "LLM_ENABLED": "false", "ACCESS_TEAM_DOMAIN": "", "ACCESS_AUD": "" }
+}

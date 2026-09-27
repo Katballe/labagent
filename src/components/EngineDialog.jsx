@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { css } from "../lib/css.js";
 import { useApp } from "../state/store.jsx";
 import { MODELS, DEFAULT_MODEL, DEFAULT_OLLAMA_MODEL, engine } from "../ai/engine.js";
+import { CLOUD_MODEL } from "../compliance/config.js";
 
 const mono = "font-family:'IBM Plex Mono',monospace";
 const pre = `margin:6px 0 0;background:#1C2422;color:#C9E4DE;padding:8px 10px;border-radius:4px;font-size:11px;overflow-x:auto;${mono};white-space:pre`;
@@ -44,8 +45,9 @@ function Option({ active, onClick, title, sub, children }) {
   );
 }
 
-// Engine picker. Instant mode is the default and needs nothing; a local model
-// is an optional upgrade. While a model downloads the app keeps working.
+// Engine picker. The Cloudflare agent is the default wherever it is deployed;
+// instant mode needs nothing and works offline; local models are optional.
+// In every mode decisions stay deterministic — see src/ai/pipeline.js.
 export default function EngineDialog() {
   const { engine: eng, engineOpen, setEngineOpen, loadModel, switchToInstant } = useApp();
   const [choice, setChoice] = useState(eng.backend);
@@ -71,10 +73,11 @@ export default function EngineDialog() {
   const loading = eng.loading;
   const picked = MODELS.find((m) => m.id === modelId);
   const webllmBlocked = !gpu?.ok || (picked?.f16 && !gpu?.f16);
-  const goDisabled = !!loading || (choice === "webllm" && webllmBlocked) || (choice === "instant" && eng.instant);
+  const goDisabled = !!loading || (choice === "webllm" && webllmBlocked) || (choice === "instant" && eng.instant) || (choice === "cloud" && eng.cloud);
 
   function go() {
     if (choice === "instant") { switchToInstant(); setEngineOpen(false); return; }
+    if (choice === "cloud") { loadModel("cloud"); return; }
     loadModel(choice, choice === "ollama" ? ollamaModel.trim() || DEFAULT_OLLAMA_MODEL : modelId);
   }
 
@@ -83,13 +86,22 @@ export default function EngineDialog() {
       <div role="dialog" aria-modal="true" aria-label="Choose engine" onClick={(e) => e.stopPropagation()} style={css("width:600px;max-width:100%;max-height:calc(100vh - 40px);overflow-y:auto;background:#F7F8F7;border:1px solid #C6CCC9;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.35)")}>
         <div style={css("background:#1C2422;color:#E8ECEA;padding:14px 18px;border-bottom:2px solid #0F6E63;display:flex;align-items:baseline;gap:10px")}>
           <span style={css("font-weight:700;font-size:15px")}>How should LabAgent answer?</span>
-          <span style={css(`${mono};font-size:10.5px;color:#8FA39D`)}>everything stays on this device</span>
+          <span style={css(`${mono};font-size:10.5px;color:#8FA39D`)}>decisions stay deterministic in every mode</span>
           <span style={css("flex:1")} />
           <button onClick={() => setEngineOpen(false)} aria-label="Close" style={css("background:none;border:none;color:#AFC0BB;font-size:18px;cursor:pointer;line-height:1")}>×</button>
         </div>
 
         <div style={css("padding:16px 18px;display:flex;flex-direction:column;gap:10px")}>
-          <Option active={choice === "instant"} onClick={() => setChoice("instant")} title="Instant mode" sub="default · nothing to download · any browser">
+          <Option active={choice === "cloud"} onClick={() => setChoice("cloud")} title="LabAgent agent on Cloudflare" sub={`default where deployed · ${CLOUD_MODEL.label}`}>
+            <div style={css("font-size:11.5px;color:#3A4744;line-height:1.6")}>
+              The LabAgent agent runs the same pipeline on Cloudflare with a pinned model (temperature 0, fixed seed). The model only words
+              SOP answers, drafts unvalidated ad-hoc queries and explains OOS evidence — never the investigation record. The agent keeps the audit
+              trail server-side and monitors itself daily. <b>Your questions leave this device</b>: fine for this synthetic demo; for real GxP data it
+              must run in your organisation's Cloudflare account behind Access, with data localisation and a supplier assessment.
+            </div>
+          </Option>
+
+          <Option active={choice === "instant"} onClick={() => setChoice("instant")} title="Instant mode" sub="offline · nothing to download · any browser">
             <div style={css("font-size:11.5px;color:#3A4744;line-height:1.6")}>
               No language model. Document answers are <b>verbatim quotes</b> from the validated SOPs with their citations; data questions map onto
               fixed read-only query templates; the OOS workflow uses its fixed step texts. Deterministic — the same question always gets the same answer,
@@ -136,12 +148,13 @@ export default function EngineDialog() {
               <div style={css("font-size:11px;color:#71807B")}>You can close this and keep working — instant mode answers until the model is ready, then it takes over.</div>
             </div>
           )}
-          {!loading && eng.error && eng.errorFor === choice && (eng.error.startsWith("ollama-") ? <OllamaHelp code={eng.error} model={ollamaModel || DEFAULT_OLLAMA_MODEL} /> : <div style={css(errBox)}>{eng.error}</div>)}
+          {!loading && eng.error === "cloud-unreachable" && choice === "cloud" && <div style={css(errBox)}>The agent isn't reachable from this page — for example on the GitHub Pages mirror, which serves the app without its Cloudflare backend. Instant mode works here.</div>}
+          {!loading && eng.error && eng.error !== "cloud-unreachable" && eng.errorFor === choice && (eng.error.startsWith("ollama-") ? <OllamaHelp code={eng.error} model={ollamaModel || DEFAULT_OLLAMA_MODEL} /> : <div style={css(errBox)}>{eng.error}</div>)}
 
           <div style={css("display:flex;gap:8px;align-items:center")}>
             <button onClick={go} disabled={goDisabled}
               style={css(`flex:1;padding:11px;background:${goDisabled ? "#B9C0BD" : "#0F6E63"};color:#fff;border:none;border-radius:5px;font-size:13px;font-weight:600;cursor:${goDisabled ? "not-allowed" : "pointer"}`)}>
-              {choice === "instant" ? (eng.instant ? "Instant mode is active" : "Switch to instant mode") : choice === "webllm" ? `Download & start ${picked?.label || "model"}` : "Connect to Ollama"}
+              {choice === "cloud" ? (eng.cloud ? "The agent is active" : "Connect to the agent") : choice === "instant" ? (eng.instant ? "Instant mode is active" : "Switch to instant mode") : choice === "webllm" ? `Download & start ${picked?.label || "model"}` : "Connect to Ollama"}
             </button>
             <button onClick={() => setEngineOpen(false)} style={css("padding:11px 16px;background:#fff;color:#3A4744;border:1px solid #C6CCC9;border-radius:5px;font-size:12.5px;cursor:pointer")}>Close</button>
           </div>

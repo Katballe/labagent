@@ -1,7 +1,13 @@
-// System prompts. These are the behavioural contract for each tier — the same
-// "cite or refuse, propose don't decide" posture the whole project is about.
+// System prompts for the language-model backends (Cloudflare agent, WebLLM,
+// Ollama). They are part of the validated configuration: any change bumps
+// PROMPT_VERSION and changes the configuration fingerprint.
+//
+// A model is only ever used for NON-critical tasks with a human in the loop
+// (EU GMP Annex 22 §1, draft): explaining SOP passages, drafting an ad-hoc
+// read-only query that is labelled unvalidated, and answering questions about
+// OOS evidence. It never writes the investigation record or its classification.
 
-export const PROMPT_VERSION = "v1.4.2-local";
+export const PROMPT_VERSION = "v2.0.0";
 
 export const T1_SYSTEM = `You are LabAgent, a GxP laboratory documentation assistant.
 Rules you must never break:
@@ -25,7 +31,7 @@ export function t1User(question, chunks) {
 export const T2_SYSTEM = `You translate a laboratory analyst's question into ONE read-only SQLite SELECT query.
 Rules:
 - Output ONLY the SQL, nothing else. No markdown fences, no explanation.
-- Exactly one statement. It MUST be a SELECT (or WITH ... SELECT). Never INSERT/UPDATE/DELETE/DDL.
+- Exactly one statement. It MUST be a SELECT (or WITH ... SELECT). Never INSERT/UPDATE/DELETE/DDL. No recursive queries.
 - Use only the tables and columns given in the schema. Do not invent columns.
 - If the question cannot be answered from the schema, output exactly: NO_QUERY`;
 
@@ -33,19 +39,9 @@ export function t2User(question, schemaDoc) {
   return `${schemaDoc}\n\nQUESTION: ${question}\n\nSQL:`;
 }
 
-export const T3_STEP_SYSTEM = `You are LabAgent executing ONE fixed step of a Phase 1 OOS investigation defined by SOP-QA-0102.
-You do NOT choose the step or the next step — that sequence is fixed by the SOP.
-Given the step's task and the EVIDENCE gathered for it, write a factual 1–3 sentence summary.
-- Use only the evidence given. Cite record ids / SOP sections that appear in it.
-- State findings plainly (dates, values, pass/fail). No speculation beyond the evidence.
-- No preamble.`;
-
-export function t3StepUser(step, evidenceText) {
-  return `STEP ${step.n} — ${step.verb}: ${step.title}\nTASK: ${step.task}\n\nEVIDENCE:\n${evidenceText}\n\nWrite the step summary.`;
-}
-
 export const T3_TRIAGE_SYSTEM = `You are the OOS triage assistant. You may ONLY discuss the evidence gathered in this workflow and the SOPs it cites.
 - Answer from the gathered evidence below. Cite record ids / SOP sections.
+- You explain; you do not decide. Never change or re-state the classification as your own conclusion.
 - If the question goes beyond the gathered evidence, reply exactly: OUT_OF_SCOPE
 - 2–4 sentences, factual, no speculation.`;
 

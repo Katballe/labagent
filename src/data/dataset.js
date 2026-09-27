@@ -71,27 +71,29 @@ export const OOS_CASE = {
   runTs: "2026-07-08 14:22", stage: "Phase III clinical",
 };
 
-// The 8 steps are a FIXED sequence per SOP-QA-0102. The model reasons WITHIN a
-// step (fills `summary` from the evidence) but never chooses the steps.
+// The 8 steps are a FIXED sequence per SOP-QA-0102, and each step's `finding`
+// is fixed, reviewed text. This is a critical GMP application (it feeds batch
+// disposition), so per EU GMP Annex 22 (draft) no generative model writes or
+// chooses any part of it.
 export const OOS_STEPS = [
   {
     n: 1, verb: "RETRIEVE", tier: "T1", title: "OOS procedure & decision tree",
     task: "State, in two sentences, the Phase 1 laboratory investigation decision tree from SOP-QA-0102 §6.1–6.4.",
-    fallback: "Retrieved SOP-QA-0102 v3.0 (effective). Phase 1 decision tree: (a) obvious error check → (b) instrument status → (c) analyst qualification → (d) pattern review → (e) classification.",
+    finding: "Retrieved SOP-QA-0102 v3.0 (effective). Phase 1 decision tree: (a) obvious error check → (b) instrument status → (c) analyst qualification → (d) pattern review → (e) classification.",
     evidence: [{ ref: "SOP-QA-0102 §6.1–6.4", kind: "doc", detail: "Phase 1 laboratory investigation flow, decision criteria for lab-error vs manufacturing classification." }],
     status: "ok",
   },
   {
     n: 2, verb: "LOOKUP", tier: "T2", title: "Sample record S-8841",
     task: "Summarise the sample record for S-8841 including result, spec, instrument and analyst.",
-    fallback: "Sample S-8841 · batch B-2291 · method MV-0412 (assay, HPLC) · instrument INS-114 · analyst A-207 · run 2026-07-08 14:22 · stage Phase III clinical. Result 78.1 %LC vs spec 95.0–105.0 %LC.",
+    finding: "Sample S-8841 · batch B-2291 · method MV-0412 (assay, HPLC) · instrument INS-114 · analyst A-207 · run 2026-07-08 14:22 · stage Phase III clinical. Result 78.1 %LC vs spec 95.0–105.0 %LC.",
     evidence: [{ ref: "samples/S-8841 · results/R-30117", kind: "db", detail: "SELECT … FROM samples JOIN results WHERE sample_id='S-8841' — 1 row, read-only." }],
     status: "ok",
   },
   {
     n: 3, verb: "CHECK", tier: "T2", title: "Instrument calibration at run time",
     task: "Was INS-114 in calibration when S-8841 was run? Compare cal_due to run_ts and state the compliance impact.",
-    fallback: "INS-114 calibration expired 2026-07-05 — three days BEFORE the S-8841 run on 2026-07-08. The result was generated on an out-of-calibration instrument; per SOP-EQ-0031 §4.1 it is not reportable. Probable lab-error root cause.",
+    finding: "INS-114 calibration expired 2026-07-05 — three days BEFORE the S-8841 run on 2026-07-08. The result was generated on an out-of-calibration instrument; per SOP-EQ-0031 §4.1 it is not reportable. Probable lab-error root cause.",
     evidence: [
       { ref: "instruments/INS-114 · calibrations/CAL-2411", kind: "db", detail: "cal_performed 2026-04-05, interval 91 d (Category B, quarterly), cal_due 2026-07-05 < run_ts 2026-07-08." },
       { ref: "SOP-EQ-0031 §4.1", kind: "doc", detail: "Category B instruments: quarterly calibration. Results from out-of-calibration instruments are not reportable." },
@@ -102,14 +104,14 @@ export const OOS_STEPS = [
   {
     n: 4, verb: "CHECK", tier: "T2", title: "Analyst qualification on MV-0412",
     task: "Was analyst A-207 qualified on MV-0412 at run time? State the qualification dates.",
-    fallback: "Analyst A-207 qualified on MV-0412 since 2025-11-18 (requalification current, due 2026-11-18). No qualification gap at run time.",
+    finding: "Analyst A-207 qualified on MV-0412 since 2025-11-18 (requalification current, due 2026-11-18). No qualification gap at run time.",
     evidence: [{ ref: "TRN-MX-0207 / A-207 · MV-0412", kind: "db", detail: "Qualification granted 2025-11-18, status CURRENT at 2026-07-08." }],
     status: "ok",
   },
   {
     n: 5, verb: "SEARCH", tier: "T2", title: "Related OOS — instrument / batch / method, 90 d",
     task: "Given related OOS results, state whether the failure signature follows the instrument or the batch.",
-    fallback: "One other related OOS in the last 90 days: R-30102 (S-8839, same batch B-2291, INS-114, 2026-07-06). Both B-2291 OOS results were run on INS-114 after its calibration expired on 2026-07-05 — consistent with an instrument cause. Every B-2291 result so far comes from INS-114, so a batch cause cannot be excluded until the retest on an in-calibration system.",
+    finding: "One other related OOS in the last 90 days: R-30102 (S-8839, same batch B-2291, INS-114, 2026-07-06). Both B-2291 OOS results were run on INS-114 after its calibration expired on 2026-07-05 — consistent with an instrument cause. Every B-2291 result so far comes from INS-114, so a batch cause cannot be excluded until the retest on an in-calibration system.",
     evidence: [
       { ref: "results — 2 rows: R-30117, R-30102", kind: "db", detail: "oos_flag=1 AND (instrument='INS-114' OR batch='B-2291' OR method='MV-0412') AND run_ts ≥ now−90d." },
       { ref: "results — R-29981", kind: "db", detail: "The only other OOS in the window (S-8815, MV-0388, INS-113) — unrelated method and instrument." },
@@ -120,14 +122,14 @@ export const OOS_STEPS = [
   {
     n: 6, verb: "SEARCH", tier: "T1", title: "Precedent search — similar historical investigations",
     task: "Does precedent INV-2024-031 match this signature, and what did it conclude?",
-    fallback: "1 precedent: INV-2024-031 — assay OOS on out-of-calibration HPLC (INS-112, 2024). Concluded lab error; retest from original preparation after recalibration passed at 99.1 %LC. Known failure mode.",
+    finding: "1 precedent: INV-2024-031 — assay OOS on out-of-calibration HPLC (INS-112, 2024). Concluded lab error; retest from original preparation after recalibration passed at 99.1 %LC. Known failure mode.",
     evidence: [{ ref: "INV-2024-031 §5 Conclusion", kind: "doc", detail: "Root cause: quantitation drift on out-of-calibration detector. Corrective action: recalibrate, retest per SOP-QA-0102 §7.3." }],
     status: "ok",
   },
   {
     n: 7, verb: "APPLY", tier: "AI", title: "Walk SOP decision tree — classification",
     task: "Walk the SOP-QA-0102 §6.4 decision tree using the gathered facts and state the proposed classification with its supporting evidence.",
-    fallback: "Decision tree §6.4: (a) no transcription/preparation error → (b) instrument NOT in calibration at run time → branch L2: probable laboratory error. Supporting: identical signature on second B-2291 sample post-expiry; precedent INV-2024-031; analyst qualification excluded.",
+    finding: "Decision tree §6.4: (a) no transcription/preparation error → (b) instrument NOT in calibration at run time → branch L2: probable laboratory error. Supporting: identical signature on second B-2291 sample post-expiry; precedent INV-2024-031; analyst qualification excluded.",
     evidence: [
       { ref: "SOP-QA-0102 §6.4 branch L2", kind: "doc", detail: "Where the instrument was outside its calibration interval at run time, classify as probable laboratory error pending retest." },
     ],
@@ -137,7 +139,7 @@ export const OOS_STEPS = [
   {
     n: 8, verb: "DRAFT", tier: "AI", title: "Phase 1 investigation record",
     task: "Note that the draft investigation record has been generated and is awaiting human review.",
-    fallback: "Draft INV-2026-084 generated. Every fact cited to its source record, 0 uncited claims. Awaiting qualified-person review — nothing has been written to the LIMS.",
+    finding: "Draft INV-2026-084 generated. Every fact cited to its source record, 0 uncited claims. Awaiting qualified-person review — nothing has been written to the LIMS.",
     evidence: [],
     status: "ok",
   },

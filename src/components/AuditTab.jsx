@@ -9,7 +9,7 @@ const COLS = "108px 186px 110px 56px 1fr 140px 96px 92px";
 
 function kindColors(k) {
   return {
-    T1: ["#E4EEEC", "#0A4F47"], T2: ["#E3EAF2", "#2B4A73"], T3: ["#F1E7F2", "#6B3A70"], EVAL: ["#F8F0DE", "#6E5410"],
+    T1: ["#E4EEEC", "#0A4F47"], T2: ["#E3EAF2", "#2B4A73"], T3: ["#F1E7F2", "#6B3A70"], EVAL: ["#F8F0DE", "#6E5410"], REVIEW: ["#DCEFE2", "#1E6E43"],
   }[k] || ["#E6E9E7", "#5A6663"];
 }
 
@@ -19,7 +19,8 @@ function Banner({ tone, children }) {
 }
 
 export default function AuditTab() {
-  const { audit, addAudit, resetAudit, auditPersisted } = useApp();
+  const { audit, addAudit, resetAudit, auditPersisted, ledger, cloudAudit, refreshAudit } = useApp();
+  const cloudLedger = ledger === "cloud";
   const [status, setStatus] = useState(null); // verifyChain result for the live log
   const [tamper, setTamper] = useState(null); // result of the tamper test
   const [open, setOpen] = useState(null);
@@ -67,7 +68,7 @@ export default function AuditTab() {
     <div style={css("flex:1;display:flex;flex-direction:column;min-width:0;background:#F7F8F7")}>
       <div style={css("flex:none;display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid #D9DDDB;background:#EFF1F0")}>
         <span style={css("font-weight:600;font-size:13px")}>Audit trail</span>
-        <span style={css("font-size:11px;color:#5A6663")}>Every interaction, with engine, prompt version and SHA-256 hashes, chained so any edit, removal or reordering is detectable.</span>
+        <span style={css("font-size:11px;color:#5A6663")}>{cloudLedger ? "Kept server-side by the Cloudflare agent for this session" : "Kept in this browser"} — every interaction, with engine, prompt version, configuration fingerprint and SHA-256 hashes, chained so any edit, removal or reordering is detectable.</span>
         <div style={css("flex:1")} />
         <span style={{ ...css(`${mono};font-size:10px;padding:3px 8px;border-radius:3px;border:1px solid`), ...(status?.ok === false ? { background: "#F4E3E1", color: "#A33025", borderColor: "#DCB4AF" } : { background: "#E4EEEC", color: "#0A4F47", borderColor: "#B9D2CD" }) }}>
           {audit.length} ENTRIES · {status == null ? "VERIFYING…" : status.ok ? "CHAIN VERIFIED ✓" : `CHAIN BROKEN AT ${status.brokenAt}`}
@@ -76,15 +77,19 @@ export default function AuditTab() {
 
       <div style={css("flex:none;padding:10px 18px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid #E6E9E7")}>
         <div style={css("display:flex;gap:8px;align-items:center;flex-wrap:wrap")}>
-          <button onClick={() => verifyChain(audit).then(setStatus)} style={css(btn)}>Verify chain</button>
+          <button onClick={() => verifyChain(audit).then(setStatus)} style={css(btn)} title="Recomputes every hash in this browser — you don't have to trust the server's own check">Verify chain</button>
+          {cloudLedger && <button onClick={refreshAudit} style={css(btn)}>Refresh</button>}
           <button onClick={tamperTest} style={css(btn)}>Tamper test</button>
           <button onClick={exportJson} disabled={!audit.length} style={css(btn)}>Export JSON</button>
-          <button onClick={clearLog} disabled={!audit.length} style={css(btn + ";color:#A33025;border-color:#DCB4AF")}>Clear log</button>
+          {!cloudLedger && <button onClick={clearLog} disabled={!audit.length} style={css(btn + ";color:#A33025;border-color:#DCB4AF")}>Clear log</button>}
           <span style={css("font-size:10.5px;color:#71807B;margin-left:6px")}>
-            Stored only in this browser. Tamper-<i>evident</i>, not tamper-proof: anyone with this browser can delete it — a production system keeps the chain on a server users can't write to.
+            {cloudLedger
+              ? <>Append-only in the agent's storage: the API has no way to edit or delete an entry. {cloudAudit.verification ? <>Server check: {cloudAudit.verification.ok ? "chain intact" : `broken at ${cloudAudit.verification.brokenAt}`}.</> : null}</>
+              : <>Stored only in this browser. Tamper-<i>evident</i>, not tamper-proof: anyone with this browser can delete it. With the Cloudflare agent the trail is kept server-side.</>}
           </span>
         </div>
-        {!auditPersisted && <Banner tone="warn">This browser isn't letting the page store data (private mode or storage blocked), so the log lasts only until you close the tab.</Banner>}
+        {cloudLedger && cloudAudit.error && <Banner tone="warn">Couldn't load the agent's audit trail: {cloudAudit.error}</Banner>}
+        {!cloudLedger && !auditPersisted && <Banner tone="warn">This browser isn't letting the page store data (private mode or storage blocked), so the log lasts only until you close the tab.</Banner>}
         {status && !status.ok && <Banner tone="bad">Verification failed at {status.brokenAt}: {status.reason}. Entries before it are intact.</Banner>}
         {tamper?.note && <Banner tone="warn">{tamper.note}</Banner>}
         {tamper?.result && (

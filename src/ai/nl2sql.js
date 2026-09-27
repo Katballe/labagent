@@ -152,6 +152,7 @@ export const WRITE_REFUSAL =
   "Changes to LIMS records go through the LIMS itself, by an authorised person.";
 
 export const INSTANT_T2_HELP =
-  "Instant mode maps questions about results, OOS, samples, batches, instruments, calibration and analyst " +
-  "qualifications onto fixed read-only queries. Name an id or a topic — e.g. “OOS results for batch B-2291”, " +
-  "“results on INS-114 in the last 7 days”, “who is qualified on MV-0407?” — or switch to local AI for free-form questions.";
+  "No validated query template matches this question. Templates cover results, OOS, samples, batches, instruments, " +
+  "calibration and analyst qualifications — name an id or a topic, e.g. “OOS results for batch B-2291”, " +
+  "“results on INS-114 in the last 7 days”, “who is qualified on MV-0407?”. With an AI model enabled, it can draft an " +
+  "ad-hoc query instead, labelled unvalidated.";

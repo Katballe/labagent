@@ -4,9 +4,10 @@ import { useApp } from "../state/store.jsx";
 import { CORPUS, SUGGESTED } from "../data/dataset.js";
 import { answerQuestion } from "../ai/labagent.js";
 
-const INTRO_INSTANT =
-  "LabAgent is ready — in instant mode, with no AI model and nothing downloaded. Ask about the SOPs and I answer with verbatim quotes from the validated corpus and their citations, or I refuse when the corpus doesn't hold the answer. " +
-  "For answers in plain prose, load a local AI model from the engine menu (top right); the same citation checks apply to it.";
+const INTRO =
+  "LabAgent is ready. Ask about the SOPs: every answer cites the controlled passage it comes from, and when the corpus doesn't hold the answer the outcome is “undecided” rather than a guess. " +
+  "With the Cloudflare agent (or a local model) the wording is AI-written and marked as such — check it against the verbatim source on the right and record your verdict. " +
+  "In instant mode the answer is the verbatim source itself. Either way this is a look-up aid: the controlled SOP governs.";
 
 const REFUSAL_BADGE = {
   "unknown-subject": "REFUSED — NOT IN CORPUS",
@@ -15,6 +16,7 @@ const REFUSAL_BADGE = {
   "model-insufficient": "DECLINED BY MODEL",
   "citation-check": "WITHHELD — FAILED CITATION CHECK",
 };
+const mono = "font-family:'IBM Plex Mono',monospace";
 
 // Entity list powering the id autocomplete (S-88…, INS-…, MV-…).
 const EXTRA = [
@@ -44,12 +46,12 @@ let msgSeq = 0;
 const rid = () => `m${++msgSeq}`;
 
 export default function AssistantTab() {
-  const { threshold, setThreshold, addAudit, engine: eng, reviewer } = useApp();
+  const { threshold, setThreshold, logResult, recordReview, engine: eng, reviewer } = useApp();
   const entities = useEntities();
   const chatRef = useRef(null);
   const inputRef = useRef(null);
   const [messages, setMessages] = useState([
-    { id: rid(), role: "assistant", text: INTRO_INSTANT, cites: [] },
+    { id: rid(), role: "assistant", text: INTRO, cites: [] },
   ]);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
@@ -86,22 +88,28 @@ export default function AssistantTab() {
       const res = await answerQuestion({
         question: q,
         threshold,
+        reviewer,
         onToken: (d) => setMessages((m) => m.map((x) => (x.id === aid ? { ...x, text: x.text + d } : x))),
       });
-      const audId = await addAudit(
+      const audId = await logResult(
+        res,
         "T1",
         res.refused
-          ? `QA: "${q.slice(0, 56)}" — ${(REFUSAL_BADGE[res.reason] || "REFUSED").toLowerCase()}`
+          ? `QA: "${q.slice(0, 56)}" — UNDECIDED (${res.reason})`
           : `QA: "${q.slice(0, 56)}" — answered, ${res.cites.length} citation(s): ${res.cites.map((c) => c.doc).join(", ")}${res.conflict ? " · conflict surfaced" : ""}`,
-        `Q: ${q}\n\nA: ${res.text}${res.withheld ? `\n\nWITHHELD MODEL OUTPUT: ${res.withheld}` : ""}`
+        JSON.stringify({
+          question: q, decision: res.decision, reason: res.reason || null, answer: res.text, withheld: res.withheld || null,
+          confidence: +res.confidence.toFixed(3), threshold, retrieved: res.retrieved,
+          cited: res.cites.map(({ doc, sec, score, matched }) => ({ doc, sec, score: +score.toFixed(3), matched })), model: res.model || null,
+        })
       );
       setMessages((m) =>
         m.map((x) =>
           x.id === aid
             ? {
                 ...x, streaming: false, text: res.text, refusal: res.refused, reason: res.reason, withheld: res.withheld, conflict: res.conflict,
-                cites: res.cites,
-                meta: `retrieval confidence ${res.confidence.toFixed(2)} (threshold ${threshold.toFixed(2)}) · ${eng.label} · ${audId}`,
+                cites: res.cites, generative: res.mode === "generative" && !res.refused, audId, note: res.note,
+                meta: `${res.decision || (res.refused ? "UNDECIDED" : "ANSWERED")} · retrieval confidence ${res.confidence.toFixed(2)} (threshold ${threshold.toFixed(2)}) · ${res.engine || eng.label} · ${audId}`,
               }
             : x
         )
@@ -110,6 +118,16 @@ export default function AssistantTab() {
       setMessages((m) => m.map((x) => (x.id === aid ? { ...x, streaming: false, text: "Engine error: " + e.message, refusal: true } : x)));
     } finally {
       setThinking(false);
+    }
+  }
+
+  async function review(msg, verdict) {
+    setMessages((m) => m.map((x) => (x.id === msg.id ? { ...x, reviewing: true } : x)));
+    try {
+      const rev = await recordReview(msg.audId, verdict, "T1 answer");
+      setMessages((m) => m.map((x) => (x.id === msg.id ? { ...x, reviewing: false, verdict, reviewId: rev } : x)));
+    } catch (e) {
+      setMessages((m) => m.map((x) => (x.id === msg.id ? { ...x, reviewing: false, reviewError: e.message } : x)));
     }
   }
 
@@ -166,7 +184,29 @@ export default function AssistantTab() {
                     ))}
                   </div>
                 )}
-                {m.meta && <div style={css("font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#9AA6A2")}>{m.meta}</div>}
+                {m.generative && (
+                  <div style={css("font-size:10.5px;color:#6E5410;background:#F8F0DE;border:1px solid #E0CD9E;border-radius:3px;padding:4px 8px;max-width:720px")}>
+                    AI-generated wording (non-critical, human in the loop). Check it against the verbatim source passages on the right; the controlled SOP governs.
+                  </div>
+                )}
+                {m.note && <div style={css("font-size:10.5px;color:#5A6663;max-width:720px")}>{m.note}</div>}
+                {m.meta && <div style={css(`${mono};font-size:9.5px;color:#9AA6A2`)}>{m.meta}</div>}
+                {!m.refusal && m.audId && !m.streaming && (
+                  <div style={css("display:flex;align-items:center;gap:6px;font-size:10.5px;color:#5A6663")}>
+                    {m.verdict ? (
+                      <span style={css(`${mono};font-size:9.5px;color:${m.verdict === "confirmed" ? "#1E6E43" : "#A33025"}`)}>
+                        your review: {m.verdict === "confirmed" ? "✓ matches the source" : "✗ incorrect"} · {m.reviewId}
+                      </span>
+                    ) : (
+                      <>
+                        <span>Your review:</span>
+                        <button disabled={m.reviewing} onClick={() => review(m, "confirmed")} style={css("font-size:10.5px;padding:2px 8px;border:1px solid #A8D4B6;background:#F0F7F2;color:#1E6E43;border-radius:3px;cursor:pointer")}>✓ Matches the source</button>
+                        <button disabled={m.reviewing} onClick={() => review(m, "incorrect")} style={css("font-size:10.5px;padding:2px 8px;border:1px solid #DCB4AF;background:#FBF3F2;color:#A33025;border-radius:3px;cursor:pointer")}>✗ Incorrect</button>
+                        {m.reviewError && <span style={css("color:#A33025")}>{m.reviewError}</span>}
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -199,7 +239,7 @@ export default function AssistantTab() {
             <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={onKey} placeholder="Ask about SOPs, methods, calibration, OOS handling… (try typing S-88, INS or MV-)" style={css("flex:1;font-size:13px;padding:10px 12px;border:1px solid #B9C0BD;border-radius:4px;background:#fff;font-family:'IBM Plex Sans',sans-serif")} />
             <button onClick={() => ask(input)} disabled={thinking} style={css(`flex:none;padding:10px 20px;background:${thinking ? "#B9C0BD" : "#0F6E63"};color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:600;cursor:${thinking ? "not-allowed" : "pointer"}`)}>Ask</button>
           </div>
-          <div style={css("font-size:10.5px;color:#71807B")}>Every question and answer is appended to the hash-chained audit trail with the engine and prompt version. Questions about things the corpus never mentions, or below the retrieval threshold, are refused.</div>
+          <div style={css("font-size:10.5px;color:#71807B")}>Every question, answer and review is appended to the hash-chained audit trail{eng.cloud ? " kept by the Cloudflare agent" : ""}, with the engine, prompt version and configuration fingerprint. Questions about things the corpus never mentions, or below the retrieval threshold, end “undecided”.</div>
         </div>
       </div>
 
@@ -216,6 +256,12 @@ export default function AssistantTab() {
               </div>
               <div style={css("font-size:10.5px;color:#5A6663")}>{c.sec}</div>
               <div style={css("font-size:11px;line-height:1.55;color:#3A4744;border-left:2px solid #B9D2CD;padding-left:8px")}>{c.excerpt}</div>
+              {!!c.matched?.length && (
+                <div style={css("display:flex;flex-wrap:wrap;gap:4px;align-items:center")} title="Why this passage: the words of your question it matched (Annex 22 §8)">
+                  <span style={css(`${mono};font-size:9px;color:#9AA6A2`)}>matched</span>
+                  {c.matched.map((w) => <span key={w} style={css(`${mono};font-size:9px;padding:1px 5px;background:#E4EEEC;color:#0A4F47;border-radius:2px`)}>{w}</span>)}
+                </div>
+              )}
             </div>
           ))}
         </div>

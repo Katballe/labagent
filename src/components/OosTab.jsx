@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { css } from "../lib/css.js";
 import { useApp } from "../state/store.jsx";
 import { OOS_CASE, OOS_STEPS, OOS_DRAFT } from "../data/dataset.js";
-import { stepSummary, triageAnswer } from "../ai/labagent.js";
+import { stepFinding, triageAnswer } from "../ai/labagent.js";
 
 const TRIAGE_SUGGESTED = [
   "Why is this classified as probable lab error?",
@@ -12,13 +12,13 @@ const TRIAGE_SUGGESTED = [
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const SOURCE_LABEL = { fixed: "fixed step text", model: "written by model", fallback: "fixed text (model output withheld)" };
+const SOURCE_LABEL = { fixed: "fixed, reviewed finding — no AI involved (critical record)" };
 
 let tSeq = 0;
 const tid = () => `t${++tSeq}`;
 
 export default function OosTab() {
-  const { addAudit, reviewer, engine: eng } = useApp();
+  const { addAudit, logResult, reviewer, engine: eng } = useApp();
   const [phase, setPhase] = useState("idle"); // idle|running|gate|approved|rejected
   const [steps, setSteps] = useState([]);
   const [running, setRunning] = useState(null); // {n, verb, title, live}
@@ -44,12 +44,11 @@ export default function OosTab() {
     const done = [];
     for (const step of OOS_STEPS) {
       setRunning({ n: step.n, verb: step.verb, title: step.title, live: "" });
+      // Findings are fixed text; the pause only lets each step be read as it appears.
       // eslint-disable-next-line no-await-in-loop
-      const [summary] = await Promise.all([
-        stepSummary({ step, onToken: (d) => setRunning((r) => (r ? { ...r, live: (r.live || "") + d } : r)) }),
-        eng.instant ? sleep(260) : null, // instant mode is immediate; pace it so each step can be read
-      ]);
-      const finished = { ...step, summaryText: summary.text, source: summary.source, sourceNote: summary.note };
+      await sleep(260);
+      const f = stepFinding(step);
+      const finished = { ...step, summaryText: f.text, source: f.source };
       done.push(finished);
       setSteps(done.slice());
       setRunning(null);
@@ -73,11 +72,12 @@ export default function OosTab() {
     setTThinking(true);
     try {
       const res = await triageAnswer({
-        question: q, steps,
+        question: q, steps, reviewer,
         onToken: (d) => setTMsgs((m) => m.map((x) => (x.id === aid ? { ...x, text: x.text + d } : x))),
       });
-      await addAudit("T3", `Triage assistant: "${q.slice(0, 50)}" — ${res.withheld ? "model answer withheld (citation check)" : res.refused ? "declined (outside gathered evidence)" : "answered from gathered evidence"}`, `Q: ${q}\n\nA: ${res.text}${res.withheld ? `\n\nWITHHELD: ${res.withheld}` : ""}`);
-      setTMsgs((m) => m.map((x) => (x.id === aid ? { ...x, streaming: false, text: res.text, refusal: res.refused, withheld: res.withheld } : x)));
+      await logResult(res, "T3", `Triage assistant: "${q.slice(0, 50)}" — ${res.withheld ? "model answer withheld (record-id check)" : res.refused ? "declined (outside gathered evidence)" : "answered from gathered evidence"}`,
+        JSON.stringify({ question: q, decision: res.decision, answer: res.text, withheld: res.withheld || null, sources: res.sources || null, model: res.model || null }));
+      setTMsgs((m) => m.map((x) => (x.id === aid ? { ...x, streaming: false, text: res.text, refusal: res.refused, withheld: res.withheld, generative: res.mode === "generative" && !res.refused } : x)));
     } catch (e) {
       setTMsgs((m) => m.map((x) => (x.id === aid ? { ...x, streaming: false, text: "Engine error: " + e.message, refusal: true } : x)));
     } finally {
@@ -110,7 +110,7 @@ export default function OosTab() {
       <div style={css("flex:1;display:flex;flex-direction:column;min-width:0;background:#F7F8F7")}>
         <div style={css("flex:none;display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid #D9DDDB;background:#EFF1F0")}>
           <span style={css("font-weight:600;font-size:13px")}>OOS Investigation Triage — Phase 1</span>
-          <span style={css("font-size:11px;color:#5A6663")}>Fixed 8-step sequence per SOP-QA-0102. {eng.instant ? "Instant mode shows each step's fixed finding." : "The model only phrases each step's finding; it never chooses the steps."}</span>
+          <span style={css("font-size:11px;color:#5A6663")}>Fixed 8-step sequence per SOP-QA-0102. Steps, findings and classification are deterministic — no AI writes the record (Annex 22: critical use).</span>
         </div>
 
         <div ref={scRef} style={css("flex:1;overflow-y:auto;min-height:0;padding:16px 18px;display:flex;flex-direction:column;gap:12px")}>
@@ -171,6 +171,7 @@ export default function OosTab() {
                     {m.refusal && <span style={css("font-family:'IBM Plex Mono',monospace;font-size:8.5px;font-weight:600;padding:1px 6px;border-radius:2px;background:#F4E3E1;color:#A33025;border:1px solid #DCB4AF")}>{m.withheld ? "WITHHELD" : "SCOPE-LIMITED"}</span>}
                   </div>
                   <div style={css("font-size:12px;line-height:1.6;color:#1C2422;white-space:pre-wrap")}>{m.text}{m.streaming && <span style={css("animation:la-pulse 1.2s infinite")}>▍</span>}</div>
+                  {m.generative && <div style={css("font-size:10px;color:#6E5410")}>AI-generated explanation — not part of the investigation record; the record and classification are fixed text.</div>}
                   {m.withheld && <details style={css("font-size:11px;color:#5A6663")}><summary style={css("cursor:pointer")}>Show the withheld model output (not relied upon)</summary><div style={css("margin-top:5px;white-space:pre-wrap")}>{m.withheld}</div></details>}
                 </div>
               ))}
@@ -244,7 +245,7 @@ export default function OosTab() {
         {(approved || rejected) && (
           <div style={{ ...css("flex:none;padding:12px 14px;font-size:11.5px;line-height:1.6;color:#1C2422"), borderTop: `2px solid ${approved ? "#1E6E43" : "#A33025"}`, background: approved ? "#F0F7F2" : "#FBF3F2" }}>
             {approved
-              ? `✓ Signed by ${sign.trim()} (demo e-signature). INV-2026-084 released to the QA queue as a signed export. The AI wrote nothing to the LIMS — it retrieved, reasoned, cited and proposed; you decided.`
+              ? `✓ Signed by ${sign.trim()} (demo e-signature). INV-2026-084 released to the QA queue as a signed export. Nothing was written to the LIMS; the findings and classification are fixed, rule-based text — you reviewed and decided.`
               : "✕ Draft rejected and discarded. No record was created anywhere. The rejection itself is on the audit trail — reviewability cuts both ways."}
           </div>
         )}

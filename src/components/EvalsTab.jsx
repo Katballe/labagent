@@ -3,6 +3,61 @@ import { css } from "../lib/css.js";
 import { useApp } from "../state/store.jsx";
 import { runSuite } from "../evals/runner.js";
 import { runSelect } from "../ai/db.js";
+import { engine } from "../ai/engine.js";
+
+// The latest acceptance-test run against the frozen held-out set (scripts/validate.mjs).
+const VALIDATION = Object.values(import.meta.glob("../../validation/latest.json", { eager: true, import: "default" }))[0] || null;
+
+function AcceptanceRun({ run }) {
+  const m = run.metrics;
+  const cm = m.t1.confusion;
+  const cell = "padding:6px 10px;border:1px solid #D9DDDB;font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:center";
+  return (
+    <div style={css("display:flex;flex-direction:column;gap:10px;border:1px solid #C6CCC9;border-radius:5px;padding:12px 14px;background:#fff")}>
+      <div style={css("display:flex;align-items:baseline;gap:10px;flex-wrap:wrap")}>
+        <span style={css("font-weight:600;font-size:12.5px")}>{run.runId}</span>
+        <span style={css(`font-family:'IBM Plex Mono',monospace;font-size:10px;color:#71807B`)}>test set {run.testSet.id} ({run.testSet.sha256.slice(0, 12)}…) · commit {run.commit} · {new Date(run.executedAt).toLocaleString()} · {run.system.engine}</span>
+        <span style={{ ...css("font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:600;padding:2px 8px;border-radius:3px"), background: run.passed ? "#DCEFE2" : "#F4E3E1", color: run.passed ? "#1E6E43" : "#A33025" }}>{run.passed ? "ACCEPTANCE CRITERIA MET" : "ACCEPTANCE CRITERIA NOT MET"}</span>
+        <span style={css("font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:600;padding:2px 8px;border-radius:3px;background:#F8F0DE;color:#6E5410")}>APPROVAL PENDING</span>
+      </div>
+      <div style={css("display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start")}>
+        <table style={css("border-collapse:collapse")}>
+          <thead><tr><th style={css(cell)}></th><th style={css(cell)}>answered</th><th style={css(cell)}>undecided</th></tr></thead>
+          <tbody>
+            <tr><th style={css(cell)}>answerable</th><td style={css(cell + ";color:#1E6E43")}>TP {cm.TP}</td><td style={css(cell)}>FN {cm.FN}</td></tr>
+            <tr><th style={css(cell)}>not answerable</th><td style={css(cell + ";color:#A33025")}>FP {cm.FP}</td><td style={css(cell + ";color:#1E6E43")}>TN {cm.TN}</td></tr>
+          </tbody>
+        </table>
+        <div style={css("font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.8;color:#3A4744")}>
+          T1 sensitivity {m.t1.sensitivity.value} <span style={css("color:#9AA6A2")}>(95% CI {m.t1.sensitivity.ci95.low}–{m.t1.sensitivity.ci95.high})</span><br />
+          T1 specificity {m.t1.specificity.value} <span style={css("color:#9AA6A2")}>(95% CI {m.t1.specificity.ci95.low}–{m.t1.specificity.ci95.high})</span><br />
+          T1 citation accuracy {m.t1.citationAccuracy.value} · precision {m.t1.precision} · F1 {m.t1.f1}<br />
+          T2 exact match {m.t2.exactMatch} (n={m.t2.n}) · T3 accuracy {m.t3.accuracy} (n={m.t3.n})
+        </div>
+      </div>
+      <div style={css("display:flex;flex-direction:column;gap:3px")}>
+        {run.acceptance.map((a) => (
+          <div key={a.id} style={css("display:flex;gap:8px;font-size:11px;align-items:baseline")}>
+            <span style={{ ...css("font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;width:40px;flex:none"), color: a.pass ? "#1E6E43" : "#A33025" }}>{a.pass ? "PASS" : "FAIL"}</span>
+            <span style={css("font-family:'IBM Plex Mono',monospace;font-size:10px;color:#5A6663;width:36px;flex:none")}>{a.id}</span>
+            <span style={css("color:#1C2422")}>{a.criterion}</span>
+            <span style={css("font-family:'IBM Plex Mono',monospace;font-size:10px;color:#71807B")}>— {a.value}</span>
+          </div>
+        ))}
+      </div>
+      {!!run.failures.length && (
+        <details>
+          <summary style={css("cursor:pointer;font-size:11px;color:#A33025")}>{run.failures.length} failing case(s) — recorded as deviations, not tuned away</summary>
+          <div style={css("display:flex;flex-direction:column;gap:3px;margin-top:6px")}>
+            {run.failures.map((x, i) => (
+              <div key={i} style={css("font-size:11px;color:#3A4744")}><span style={css("font-family:'IBM Plex Mono',monospace;font-size:10px;color:#71807B")}>[{x.cat}{x.group ? ` · ${x.group}` : ""}]</span> {x.name} <span style={css("color:#71807B")}>— {x.detail}</span></div>
+            ))}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
 
 const mono = "font-family:'IBM Plex Mono',monospace";
 const pctTxt = (r) => `${Math.round(r * 100)}%`;
@@ -75,17 +130,22 @@ export default function EvalsTab() {
     setLive(null);
     setProgress({ done: 0, total: 1 });
     const t0 = performance.now();
+    // A local model is measured directly; with the cloud agent the browser runs
+    // the deterministic pipeline (the agent runs its own self-check daily).
+    const localModel = !eng.instant && !eng.cloud;
+    const label = localModel ? eng.label : "deterministic pipeline in this browser";
     const res = await runSuite({
       where: "browser",
       exec: (sql) => runSelect(sql),
       runaway: (sql) => runSelect(sql),
+      llm: localModel ? { label: eng.label, chat: (o) => engine.chat(o) } : null,
       onProgress: (done, total) => setProgress({ done, total }),
     });
     const ms = Math.round(performance.now() - t0);
     const passedCases = res.cases.filter((c) => c.pass).length;
-    setLive({ ...res, ms, engine: eng.label, passedCases });
+    setLive({ ...res, ms, engine: label, passedCases });
     setProgress(null);
-    await addAudit("EVAL", `Eval suite run in browser · ${eng.label} · ${passedCases}/${res.cases.length} cases passed · ${res.passed ? "all targets met" : "BELOW TARGET"}`,
+    await addAudit("EVAL", `Eval suite run in browser · ${label} · ${passedCases}/${res.cases.length} cases passed · ${res.passed ? "all targets met" : "BELOW TARGET"}`,
       res.categories.map((c) => `${c.label}: ${c.passed}/${c.n}`).join("\n"));
   }
 
@@ -131,7 +191,15 @@ export default function EvalsTab() {
 
         <div style={css("display:flex;flex-direction:column;gap:8px")}>
           <div style={css("display:flex;align-items:baseline;gap:10px")}>
-            <span style={css("font-weight:600;font-size:12.5px")}>Published with this build</span>
+            <span style={css("font-weight:600;font-size:12.5px")}>Acceptance test — frozen held-out set</span>
+            <span style={css("font-size:11px;color:#5A6663")}>EU GMP Annex 22 §4–7 (draft): criteria fixed before the run, test data never used for tuning. Plan TP-001 · report in docs/validation.</span>
+          </div>
+          {VALIDATION ? <AcceptanceRun run={VALIDATION} /> : <div style={css("font-size:11.5px;color:#71807B")}>No acceptance run recorded yet (npm run validate).</div>}
+        </div>
+
+        <div style={css("display:flex;flex-direction:column;gap:8px")}>
+          <div style={css("display:flex;align-items:baseline;gap:10px")}>
+            <span style={css("font-weight:600;font-size:12.5px")}>Development suite — published with this build</span>
             {pub && <span style={css(`${mono};font-size:10px;color:#71807B`)}>commit {pub.commit} · {pub.engine} · {new Date(pub.generatedAt).toLocaleString()} · {pub.runtimeMs} ms</span>}
           </div>
           {pub === undefined && <div style={css("font-size:11.5px;color:#71807B")}>Loading…</div>}
@@ -151,8 +219,9 @@ export default function EvalsTab() {
         </div>
 
         <div style={css("font-size:11px;color:#71807B;line-height:1.6;max-width:820px;border-top:1px solid #E6E9E7;padding-top:12px")}>
-          Honest limits: the retriever was tuned against these cases, so they are regression tests rather than a blind benchmark; and instant-mode scores say nothing about
-          how a language model phrases answers — run the suite with a model loaded to measure that. The corpus and database are small and synthetic.
+          Honest limits: the development suite is what the retriever was tuned against, so it is a regression test; the held-out set is the acceptance test, but it is
+          small and was written by an AI assistant, so it needs SME verification and a second, independently written set before any release decision (see the
+          validation report). Deterministic scores say nothing about how a language model words answers — that is measured by the agent's self-check and by human review records.
         </div>
       </div>
     </div>
