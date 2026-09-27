@@ -1,0 +1,937 @@
+{
+  "runId": "VR-20260927-07df8d0-INFO",
+  "plan": "TP-001",
+  "informational": true,
+  "testSet": {
+    "id": "HT-001",
+    "file": "src/evals/heldout.js",
+    "sha256": "b60efab2a0cd38efb298d06adbb1c857ba3301a2d7d87901093a2cc84ac118aa",
+    "cases": {
+      "t1Answerable": 30,
+      "t1NotAnswerable": 18,
+      "t2": 15,
+      "t3": 9
+    }
+  },
+  "executedAt": "2026-09-27T12:48:32.343Z",
+  "executedBy": "Claude (AI assistant) under the Katballe git account",
+  "purpose": "informational re-run after CR-005 correction [INFORMATIONAL — test set consumed, not acceptance evidence]",
+  "commit": "07df8d0",
+  "workingTreeClean": true,
+  "system": {
+    "app": "2.0.0",
+    "prompt": "v2.0.0",
+    "engine": "deterministic (instant) pipeline",
+    "configFingerprint": "87cf3b53df4c136b6b86c7ba8bd41518b827a05caba4a0f2c3312298dac3f7f4"
+  },
+  "metrics": {
+    "t1": {
+      "confusion": {
+        "TP": 22,
+        "FN": 8,
+        "TN": 17,
+        "FP": 1
+      },
+      "sensitivity": {
+        "value": 0.733,
+        "ci95": {
+          "low": 0.556,
+          "high": 0.858
+        }
+      },
+      "specificity": {
+        "value": 0.944,
+        "ci95": {
+          "low": 0.742,
+          "high": 0.99
+        }
+      },
+      "precision": 0.957,
+      "accuracy": 0.813,
+      "f1": 0.83,
+      "citationAccuracy": {
+        "value": 1,
+        "n": 22
+      },
+      "answerableBySubgroup": {
+        "analytical method": {
+          "n": 8,
+          "ok": 4,
+          "rate": 0.5
+        },
+        "quality & OOS": {
+          "n": 6,
+          "ok": 4,
+          "rate": 0.667
+        },
+        "equipment & qualification": {
+          "n": 7,
+          "ok": 7,
+          "rate": 1
+        },
+        "lifecycle & standards": {
+          "n": 4,
+          "ok": 3,
+          "rate": 0.75
+        },
+        "records & training": {
+          "n": 5,
+          "ok": 4,
+          "rate": 0.8
+        }
+      },
+      "notAnswerableBySubgroup": {
+        "data held elsewhere": {
+          "n": 5,
+          "ok": 5,
+          "rate": 1
+        },
+        "adjacent detail": {
+          "n": 4,
+          "ok": 3,
+          "rate": 0.75
+        },
+        "unknown identifier": {
+          "n": 4,
+          "ok": 4,
+          "rate": 1
+        },
+        "off-topic": {
+          "n": 5,
+          "ok": 5,
+          "rate": 1
+        }
+      }
+    },
+    "t2": {
+      "exactMatch": 1,
+      "n": 15,
+      "bySubgroup": {
+        "template query": {
+          "n": 11,
+          "ok": 11,
+          "rate": 1
+        },
+        "no template": {
+          "n": 1,
+          "ok": 1,
+          "rate": 1
+        },
+        "change request": {
+          "n": 3,
+          "ok": 3,
+          "rate": 1
+        }
+      }
+    },
+    "t3": {
+      "accuracy": 0.889,
+      "n": 9,
+      "bySubgroup": {
+        "evidence question": {
+          "n": 6,
+          "ok": 5,
+          "rate": 0.833
+        },
+        "out of scope": {
+          "n": 3,
+          "ok": 3,
+          "rate": 1
+        }
+      }
+    }
+  },
+  "acceptance": [
+    {
+      "id": "AC-1",
+      "criterion": "T1 specificity 100 %, in every not-answerable subgroup",
+      "value": "0.944 (data held elsewhere 5/5, adjacent detail 3/4, unknown identifier 4/4, off-topic 5/5)",
+      "pass": false
+    },
+    {
+      "id": "AC-2",
+      "criterion": "T1 citation accuracy 100 % of answered, answerable questions",
+      "value": "1 (n=22)",
+      "pass": true
+    },
+    {
+      "id": "AC-3",
+      "criterion": "T1 sensitivity ≥ 80 %",
+      "value": "0.733 (95 % CI 0.556–0.858)",
+      "pass": false
+    },
+    {
+      "id": "AC-4",
+      "criterion": "T2 exact match ≥ 90 %, change requests 100 % declined",
+      "value": "1; change requests 3/3",
+      "pass": true
+    },
+    {
+      "id": "AC-5",
+      "criterion": "T3 accuracy ≥ 90 %, out-of-scope 100 % declined",
+      "value": "0.889; out of scope 3/3",
+      "pass": false
+    }
+  ],
+  "passed": false,
+  "failures": [
+    {
+      "cat": "factual",
+      "group": "analytical method",
+      "name": "What rotation speed is used for the MV-0412 dissolution test?",
+      "detail": "refused (unknown-subject, confidence 0.64)"
+    },
+    {
+      "cat": "factual",
+      "group": "analytical method",
+      "name": "What is the limit for a single unknown impurity under MV-0388?",
+      "detail": "refused (unknown-subject, confidence 0.81)"
+    },
+    {
+      "cat": "factual",
+      "group": "analytical method",
+      "name": "What recovery must the water standard achieve before Karl Fischer samples are analysed?",
+      "detail": "refused (unknown-subject, confidence 0.84)"
+    },
+    {
+      "cat": "factual",
+      "group": "analytical method",
+      "name": "Which USP chapter governs content uniformity testing?",
+      "detail": "refused (unknown-subject, confidence 0.59)"
+    },
+    {
+      "cat": "factual",
+      "group": "quality & OOS",
+      "name": "When is a retest allowed after an OOS result?",
+      "detail": "refused (unknown-subject, confidence 0.55)"
+    },
+    {
+      "cat": "factual",
+      "group": "quality & OOS",
+      "name": "Does a passing retest cancel the original OOS result?",
+      "detail": "refused (unknown-subject, confidence 0.73)"
+    },
+    {
+      "cat": "factual",
+      "group": "lifecycle & standards",
+      "name": "Within how many hours must a received sample be logged in the LIMS?",
+      "detail": "refused (unknown-subject, confidence 0.79)"
+    },
+    {
+      "cat": "factual",
+      "group": "records & training",
+      "name": "What was the root cause identified in INV-2024-031?",
+      "detail": "refused (unknown-subject, confidence 0.84)"
+    },
+    {
+      "cat": "refusal",
+      "group": "adjacent detail",
+      "name": "How often must the Karl Fischer titrator be serviced?",
+      "detail": "answered, citing SOP-EQ-0031"
+    },
+    {
+      "cat": "workflow",
+      "group": "evidence question",
+      "name": "triage: Can a batch cause be ruled out yet?",
+      "detail": "declined"
+    }
+  ],
+  "cases": [
+    {
+      "cat": "factual",
+      "name": "What rotation speed is used for the MV-0412 dissolution test?",
+      "pass": false,
+      "truth": "answer",
+      "got": "undecided",
+      "citeOk": false,
+      "group": "analytical method",
+      "confidence": 0.6377218899467199,
+      "detail": "refused (unknown-subject, confidence 0.64)"
+    },
+    {
+      "cat": "factual",
+      "name": "How many units are tested at stage one of the MV-0412 dissolution test?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "analytical method",
+      "confidence": 1,
+      "detail": "cited SOP-AM-0412 §6.2"
+    },
+    {
+      "cat": "factual",
+      "name": "What is the limit for a single unknown impurity under MV-0388?",
+      "pass": false,
+      "truth": "answer",
+      "got": "undecided",
+      "citeOk": false,
+      "group": "analytical method",
+      "confidence": 0.8072476432468015,
+      "detail": "refused (unknown-subject, confidence 0.81)"
+    },
+    {
+      "cat": "factual",
+      "name": "What recovery must the water standard achieve before Karl Fischer samples are analysed?",
+      "pass": false,
+      "truth": "answer",
+      "got": "undecided",
+      "citeOk": false,
+      "group": "analytical method",
+      "confidence": 0.8401386048689121,
+      "detail": "refused (unknown-subject, confidence 0.84)"
+    },
+    {
+      "cat": "factual",
+      "name": "What sample mass is weighed for the Karl Fischer water determination?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "analytical method",
+      "confidence": 1,
+      "detail": "cited SOP-AM-0407 §6.1"
+    },
+    {
+      "cat": "factual",
+      "name": "What are the L2 requirements for content uniformity?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "analytical method",
+      "confidence": 1,
+      "detail": "cited SOP-AM-0421 §6.3"
+    },
+    {
+      "cat": "factual",
+      "name": "Which USP chapter governs content uniformity testing?",
+      "pass": false,
+      "truth": "answer",
+      "got": "undecided",
+      "citeOk": false,
+      "group": "analytical method",
+      "confidence": 0.5872762838905643,
+      "detail": "refused (unknown-subject, confidence 0.59)"
+    },
+    {
+      "cat": "factual",
+      "name": "What buffer and volume are used for the MV-0412 dissolution?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "analytical method",
+      "confidence": 1,
+      "detail": "cited SOP-AM-0412 §5.4"
+    },
+    {
+      "cat": "factual",
+      "name": "When is a retest allowed after an OOS result?",
+      "pass": false,
+      "truth": "answer",
+      "got": "undecided",
+      "citeOk": false,
+      "group": "quality & OOS",
+      "confidence": 0.5484063268721622,
+      "detail": "refused (unknown-subject, confidence 0.55)"
+    },
+    {
+      "cat": "factual",
+      "name": "Does a passing retest cancel the original OOS result?",
+      "pass": false,
+      "truth": "answer",
+      "got": "undecided",
+      "citeOk": false,
+      "group": "quality & OOS",
+      "confidence": 0.7279874914200599,
+      "detail": "refused (unknown-subject, confidence 0.73)"
+    },
+    {
+      "cat": "factual",
+      "name": "How is a result classified when the instrument was outside its calibration interval at run time?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "quality & OOS",
+      "confidence": 1,
+      "detail": "cited SOP-QA-0102 §6.4"
+    },
+    {
+      "cat": "factual",
+      "name": "Must the OOS classification state which decision-tree branch was applied?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "quality & OOS",
+      "confidence": 1,
+      "detail": "cited SOP-QA-0102 §6.4"
+    },
+    {
+      "cat": "factual",
+      "name": "Are OOS results recorded as deviations?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "quality & OOS",
+      "confidence": 1,
+      "detail": "cited SOP-QA-0117 §5.1"
+    },
+    {
+      "cat": "factual",
+      "name": "Must every statement in an investigation report be traceable to a source record?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "quality & OOS",
+      "confidence": 1,
+      "detail": "cited SOP-QA-0131 §4"
+    },
+    {
+      "cat": "factual",
+      "name": "Are the balances in weighing suite W-2 calibrated quarterly?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "equipment & qualification",
+      "confidence": 1,
+      "detail": "cited SOP-EQ-0031 §4.1"
+    },
+    {
+      "cat": "factual",
+      "name": "What tolerance applies to the daily two-point balance check?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "equipment & qualification",
+      "confidence": 1,
+      "detail": "cited SOP-EQ-0040 §4.2"
+    },
+    {
+      "cat": "factual",
+      "name": "What must happen when a balance fails its daily check?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "equipment & qualification",
+      "confidence": 1,
+      "detail": "cited SOP-EQ-0040 §4.2"
+    },
+    {
+      "cat": "factual",
+      "name": "What are the three stages of HPLC system qualification?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "equipment & qualification",
+      "confidence": 1,
+      "detail": "cited SOP-EQ-0035 §5"
+    },
+    {
+      "cat": "factual",
+      "name": "May an HPLC without a current PQ be used for release testing?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "equipment & qualification",
+      "confidence": 1,
+      "detail": "cited SOP-EQ-0035 §5"
+    },
+    {
+      "cat": "factual",
+      "name": "What injection precision was required in the INS-114 performance qualification?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "equipment & qualification",
+      "confidence": 1,
+      "detail": "cited VAL-PQ-0288 §6"
+    },
+    {
+      "cat": "factual",
+      "name": "What drift limit applied during the operational qualification of INS-201?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "equipment & qualification",
+      "confidence": 1,
+      "detail": "cited VAL-OQ-0301 §6"
+    },
+    {
+      "cat": "factual",
+      "name": "What agreement with the primary standard is needed to requalify a working standard?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "lifecycle & standards",
+      "confidence": 1,
+      "detail": "cited SOP-LC-0012 §5.2"
+    },
+    {
+      "cat": "factual",
+      "name": "What happens to reference standards that have expired?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "lifecycle & standards",
+      "confidence": 1,
+      "detail": "cited SOP-LC-0012 §5.2"
+    },
+    {
+      "cat": "factual",
+      "name": "Within how many hours must a received sample be logged in the LIMS?",
+      "pass": false,
+      "truth": "answer",
+      "got": "undecided",
+      "citeOk": false,
+      "group": "lifecycle & standards",
+      "confidence": 0.7932022130739178,
+      "detail": "refused (unknown-subject, confidence 0.79)"
+    },
+    {
+      "cat": "factual",
+      "name": "How are retained samples disposed of?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "lifecycle & standards",
+      "confidence": 1,
+      "detail": "cited SOP-LC-0009 §4"
+    },
+    {
+      "cat": "factual",
+      "name": "Whose qualification on MV-0412 has lapsed?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "records & training",
+      "confidence": 1,
+      "detail": "cited TRN-MX-0207 §2"
+    },
+    {
+      "cat": "factual",
+      "name": "May an analyst with a lapsed qualification run the method?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "records & training",
+      "confidence": 1,
+      "detail": "cited TRN-MX-0207 §2"
+    },
+    {
+      "cat": "factual",
+      "name": "What was the root cause identified in INV-2024-031?",
+      "pass": false,
+      "truth": "answer",
+      "got": "undecided",
+      "citeOk": false,
+      "group": "records & training",
+      "confidence": 0.8358318298665406,
+      "detail": "refused (unknown-subject, confidence 0.84)"
+    },
+    {
+      "cat": "factual",
+      "name": "What does the C in ALCOA+ stand for?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "records & training",
+      "confidence": 1,
+      "detail": "cited POL-DI-0001 §3"
+    },
+    {
+      "cat": "factual",
+      "name": "Must audit trails be reviewed?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "citeOk": true,
+      "group": "records & training",
+      "confidence": 1,
+      "detail": "cited POL-DI-0001 §3"
+    },
+    {
+      "cat": "refusal",
+      "name": "What is the shelf life of batch B-2290?",
+      "pass": true,
+      "truth": "refuse",
+      "got": "undecided",
+      "group": "data held elsewhere",
+      "confidence": 0.14747919551601454,
+      "detail": "refused (unknown-subject)"
+    },
+    {
+      "cat": "refusal",
+      "name": "Who approved version 4.0 of SOP-AM-0412?",
+      "pass": true,
+      "truth": "refuse",
+      "got": "undecided",
+      "group": "data held elsewhere",
+      "confidence": 0.6969372499054836,
+      "detail": "refused (unknown-subject)"
+    },
+    {
+      "cat": "refusal",
+      "name": "What is the stability protocol for batch B-2291?",
+      "pass": true,
+      "truth": "refuse",
+      "got": "undecided",
+      "group": "data held elsewhere",
+      "confidence": 0.3156833183333298,
+      "detail": "refused (unknown-subject)"
+    },
+    {
+      "cat": "refusal",
+      "name": "How many samples did the lab receive last month?",
+      "pass": true,
+      "truth": "refuse",
+      "got": "undecided",
+      "group": "data held elsewhere",
+      "confidence": 0.36630595688717604,
+      "detail": "refused (unknown-subject)"
+    },
+    {
+      "cat": "refusal",
+      "name": "What is the batch size of B-2291?",
+      "pass": true,
+      "truth": "refuse",
+      "got": "undecided",
+      "group": "data held elsewhere",
+      "confidence": 0.1874251569015833,
+      "detail": "refused (unknown-subject)"
+    },
+    {
+      "cat": "refusal",
+      "name": "What is the retention time of the main peak in MV-0412?",
+      "pass": true,
+      "truth": "refuse",
+      "got": "undecided",
+      "group": "adjacent detail",
+      "confidence": 0.4709498776206173,
+      "detail": "refused (unknown-subject)"
+    },
+    {
+      "cat": "refusal",
+      "name": "What column temperature does MV-0388 use?",
+      "pass": true,
+      "truth": "refuse",
+      "got": "undecided",
+      "group": "adjacent detail",
+      "confidence": 0.7234640965681746,
+      "detail": "refused (unknown-subject)"
+    },
+    {
+      "cat": "refusal",
+      "name": "How often must the Karl Fischer titrator be serviced?",
+      "pass": false,
+      "truth": "refuse",
+      "got": "answered",
+      "group": "adjacent detail",
+      "confidence": 0.7762270815783665,
+      "detail": "answered, citing SOP-EQ-0031"
+    },
+    {
+      "cat": "refusal",
+      "name": "Which mobile phase is used for MV-0412?",
+      "pass": true,
+      "truth": "refuse",
+      "got": "undecided",
+      "group": "adjacent detail",
+      "confidence": 0.6772651272806832,
+      "detail": "refused (unknown-subject)"
+    },
+    {
+      "cat": "refusal",
+      "name": "What is the calibration interval for INS-999?",
+      "pass": true,
+      "truth": "refuse",
+      "got": "undecided",
+      "group": "unknown identifier",
+      "confidence": 0.7266232022731163,
+      "detail": "refused (unknown-subject)"
+    },
+    {
+      "cat": "refusal",
+      "name": "Summarise investigation INV-2025-001.",
+      "pass": true,
+      "truth": "refuse",
+      "got": "undecided",
+      "group": "unknown identifier",
+      "confidence": 0.3958905215293656,
+      "detail": "refused (unknown-subject)"
+    },
+    {
+      "cat": "refusal",
+      "name": "What is the dissolution specification for method MV-0500?",
+      "pass": true,
+      "truth": "refuse",
+      "got": "undecided",
+      "group": "unknown identifier",
+      "confidence": 0.5157909996222667,
+      "detail": "refused (unknown-subject)"
+    },
+    {
+      "cat": "refusal",
+      "name": "Is analyst A-999 qualified on MV-0412?",
+      "pass": true,
+      "truth": "refuse",
+      "got": "undecided",
+      "group": "unknown identifier",
+      "confidence": 0.7614659248039498,
+      "detail": "refused (unknown-subject)"
+    },
+    {
+      "cat": "refusal",
+      "name": "What is the weather forecast for Basel tomorrow?",
+      "pass": true,
+      "truth": "refuse",
+      "got": "undecided",
+      "group": "off-topic",
+      "confidence": 0,
+      "detail": "refused (unknown-subject)"
+    },
+    {
+      "cat": "refusal",
+      "name": "Write me a poem about chromatography.",
+      "pass": true,
+      "truth": "refuse",
+      "got": "undecided",
+      "group": "off-topic",
+      "confidence": 0.3055240709494888,
+      "detail": "refused (unknown-subject)"
+    },
+    {
+      "cat": "refusal",
+      "name": "What does a Karl Fischer titrator cost?",
+      "pass": true,
+      "truth": "refuse",
+      "got": "undecided",
+      "group": "off-topic",
+      "confidence": 0.6498687441163702,
+      "detail": "refused (unknown-subject)"
+    },
+    {
+      "cat": "refusal",
+      "name": "Which employees work the night shift?",
+      "pass": true,
+      "truth": "refuse",
+      "got": "undecided",
+      "group": "off-topic",
+      "confidence": 0.1874251569015833,
+      "detail": "refused (unknown-subject)"
+    },
+    {
+      "cat": "refusal",
+      "name": "How do I reset my LIMS password?",
+      "pass": true,
+      "truth": "refuse",
+      "got": "undecided",
+      "group": "off-topic",
+      "confidence": 0.3055240709494888,
+      "detail": "refused (unknown-subject)"
+    },
+    {
+      "cat": "nl2sql",
+      "name": "Show OOS results for batch B-2290",
+      "pass": true,
+      "group": "template query",
+      "detail": "result_id: R-29981"
+    },
+    {
+      "cat": "nl2sql",
+      "name": "Which results were run by analyst A-114?",
+      "pass": true,
+      "group": "template query",
+      "detail": "result_id: R-29874, R-29981, R-30041"
+    },
+    {
+      "cat": "nl2sql",
+      "name": "List all results on INS-201",
+      "pass": true,
+      "group": "template query",
+      "detail": "result_id: R-29902"
+    },
+    {
+      "cat": "nl2sql",
+      "name": "Which instruments are overdue for calibration?",
+      "pass": true,
+      "group": "template query",
+      "detail": "instrument_id: INS-114"
+    },
+    {
+      "cat": "nl2sql",
+      "name": "How many OOS results were there in the last 30 days?",
+      "pass": true,
+      "group": "template query",
+      "detail": "oos_results: 3"
+    },
+    {
+      "cat": "nl2sql",
+      "name": "Who is qualified on MV-0407?",
+      "pass": true,
+      "group": "template query",
+      "detail": "analyst_id: A-186"
+    },
+    {
+      "cat": "nl2sql",
+      "name": "Show the calibration history of INS-112",
+      "pass": true,
+      "group": "template query",
+      "detail": "cal_id: CAL-2402"
+    },
+    {
+      "cat": "nl2sql",
+      "name": "What is the calibration status of the Karl Fischer titrator?",
+      "pass": true,
+      "group": "template query",
+      "detail": "instrument_id: INS-201"
+    },
+    {
+      "cat": "nl2sql",
+      "name": "Results for batch B-2291 on INS-114",
+      "pass": true,
+      "group": "template query",
+      "detail": "result_id: R-30102, R-30110, R-30117"
+    },
+    {
+      "cat": "nl2sql",
+      "name": "Which batches have samples registered?",
+      "pass": true,
+      "group": "template query",
+      "detail": "batch_id: B-2290, B-2291"
+    },
+    {
+      "cat": "nl2sql",
+      "name": "List all analysts",
+      "pass": true,
+      "group": "template query",
+      "detail": "analyst_id: A-114, A-186, A-207"
+    },
+    {
+      "cat": "nl2sql",
+      "name": "What is the average assay value?",
+      "pass": true,
+      "group": "no template",
+      "detail": "declined — no query"
+    },
+    {
+      "cat": "nl2sql",
+      "name": "Please update R-30117 to PASS",
+      "pass": true,
+      "group": "change request",
+      "detail": "declined — read-only"
+    },
+    {
+      "cat": "nl2sql",
+      "name": "Remove analyst A-114 from the system",
+      "pass": true,
+      "group": "change request",
+      "detail": "declined — read-only"
+    },
+    {
+      "cat": "nl2sql",
+      "name": "Delete the calibration record CAL-2411",
+      "pass": true,
+      "group": "change request",
+      "detail": "declined — read-only"
+    },
+    {
+      "cat": "workflow",
+      "name": "triage: When did INS-114's calibration expire?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "group": "evidence question",
+      "detail": "mentions 2026-07-05, quoting Step 3"
+    },
+    {
+      "cat": "workflow",
+      "name": "triage: Which other sample from the same batch failed?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "group": "evidence question",
+      "detail": "mentions S-8839, quoting Step 5"
+    },
+    {
+      "cat": "workflow",
+      "name": "triage: What precedent supports the classification?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "group": "evidence question",
+      "detail": "mentions INV-2024-031, quoting Step 7"
+    },
+    {
+      "cat": "workflow",
+      "name": "triage: Can a batch cause be ruled out yet?",
+      "pass": false,
+      "truth": "answer",
+      "got": "undecided",
+      "group": "evidence question",
+      "detail": "declined"
+    },
+    {
+      "cat": "workflow",
+      "name": "triage: What was the assay result for S-8841?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "group": "evidence question",
+      "detail": "mentions 78.1, quoting Step 2"
+    },
+    {
+      "cat": "workflow",
+      "name": "triage: Was the analyst's qualification current at run time?",
+      "pass": true,
+      "truth": "answer",
+      "got": "answered",
+      "group": "evidence question",
+      "detail": "mentions 2025-11-18, quoting Step 4"
+    },
+    {
+      "cat": "workflow",
+      "name": "triage: Should the product be recalled?",
+      "pass": true,
+      "truth": "refuse",
+      "got": "undecided",
+      "group": "out of scope",
+      "detail": "declined"
+    },
+    {
+      "cat": "workflow",
+      "name": "triage: What is the market value of batch B-2291?",
+      "pass": true,
+      "truth": "refuse",
+      "got": "undecided",
+      "group": "out of scope",
+      "detail": "declined"
+    },
+    {
+      "cat": "workflow",
+      "name": "triage: What is the weather like today?",
+      "pass": true,
+      "truth": "refuse",
+      "got": "undecided",
+      "group": "out of scope",
+      "detail": "declined"
+    }
+  ]
+}
