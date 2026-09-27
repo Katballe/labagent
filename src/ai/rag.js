@@ -27,7 +27,14 @@ const STOP = new Set(
     "rule rules requirement requirements procedure procedures document documents often much many " +
     "long count counts counted thing things anything something okay ok also just still before after " +
     "whats what's is there are there own stand cover covers covered event events situation situations case cases circumstance " +
-    "circumstances").split(/\s+/)
+    "circumstances " +
+    // CR-005: the rest of a standard English function-word list (auxiliaries,
+    // pronouns, prepositions, determiners) — grammar, never topic.
+    "have has had having am being done doing he him his she her hers its itself myself ourselves themselves " +
+    "yourself yourselves during through throughout above below across against along among around behind " +
+    "beside besides beyond despite down inside near off onto out outside since toward towards until up " +
+    "upon via without whether while whilst yet each every either neither both few more most other others " +
+    "same very too nor not no only here hence thus therefore however").split(/\s+/)
 );
 
 // Multi-word rewrites applied to the lowercased question first.

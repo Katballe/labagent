@@ -8,6 +8,8 @@ import { REGULATION, FUNCTIONS, ANNEX22, DOCS_BASE } from "../compliance/intende
 
 const VALIDATION = Object.values(import.meta.glob("../../validation/latest.json", { eager: true, import: "default" }))[0] || null;
 const mono = "font-family:'IBM Plex Mono',monospace";
+// eslint-disable-next-line no-undef
+const BUILD_COMMIT = typeof __BUILD_COMMIT__ === "string" ? __BUILD_COMMIT__ : "dev";
 const STATUS = { met: ["#DCEFE2", "#1E6E43", "MET"], partial: ["#F8F0DE", "#6E5410", "PARTIAL"], open: ["#F4E3E1", "#A33025", "OPEN"] };
 
 function Section({ title, sub, children }) {
@@ -119,11 +121,20 @@ export default function ComplianceTab() {
             <Fp label="This app (browser)" value={fp} match={validatedFp ? fp === validatedFp : null} />
             <Fp label="Cloudflare agent" value={agentFp} match={agentFp && validatedFp ? agentFp === validatedFp : null} />
             <Fp label={`Validated run ${VALIDATION?.runId || "(none yet)"}`} value={validatedFp} />
+            <div style={css("display:flex;align-items:center;gap:8px;font-size:11px")}>
+              <span style={css("width:170px;color:#5A6663;flex:none")}>Code: this build / tested</span>
+              <span style={css(`${mono};font-size:10.5px;color:#1C2422`)}>{BUILD_COMMIT} / {VALIDATION?.commit || "—"}</span>
+              {VALIDATION && (
+                <span style={{ ...css(`${mono};font-size:9px;font-weight:600;padding:1px 6px;border-radius:2px`), background: BUILD_COMMIT === VALIDATION.commit ? "#DCEFE2" : "#F8F0DE", color: BUILD_COMMIT === VALIDATION.commit ? "#1E6E43" : "#6E5410" }}>
+                  {BUILD_COMMIT === VALIDATION.commit ? "SAME COMMIT" : "CHANGED SINCE TEST — needs impact assessment"}
+                </span>
+              )}
+            </div>
             <div style={css(`${mono};font-size:10px;color:#71807B;line-height:1.7;margin-top:4px`)}>
               app v{APP_VERSION} · prompt {PROMPT_VERSION} · agent model {CLOUD_MODEL.id} · temperature {GENERATION.temperature} · seed {GENERATION.seed}
               {eng.cloudInfo?.worker ? ` · worker version ${eng.cloudInfo.worker.tag || eng.cloudInfo.worker.id?.slice(0, 8)}` : ""}
             </div>
-            <div style={css("font-size:10.5px;color:#71807B")}>The fingerprint covers prompts, generation settings, the pinned model, the retrieval threshold, the document corpus, the OOS workflow and the database seed. Code changes are covered by the commit recorded with each validation run.</div>
+            <div style={css("font-size:10.5px;color:#71807B")}>The fingerprint covers prompts, generation settings, the pinned model, the retrieval threshold, the document corpus, the OOS workflow and the database seed. Code is identified by its commit; any difference from the tested commit goes through change control before release.</div>
           </div>
         </Section>
 
