@@ -171,7 +171,9 @@ export default function EvalsTab() {
             <div style={css("display:flex;flex-direction:column;gap:3px")}>
               <span style={css("font-weight:600;font-size:12.5px")}>Run the suite in this browser</span>
               <span style={css("font-size:11px;color:#5A6663;line-height:1.5")}>
-                Same cases, through the engine you're using now (<b>{eng.label}</b>){eng.instant ? " — takes a few seconds, including a deliberate runaway query that must be stopped." : " — model answers are slower and vary by model; expect a few minutes."}
+                {eng.cloud
+                  ? <>Runs the deterministic pipeline here in your browser — the agent runs the same suite on itself daily (see Compliance). Takes a few seconds, including a deliberate runaway query that must be stopped.</>
+                  : <>Same cases, through the engine you're using now (<b>{eng.label}</b>){eng.instant ? " — takes a few seconds, including a deliberate runaway query that must be stopped." : " — model answers are slower and vary by model; expect a few minutes."}</>}
               </span>
             </div>
             <div style={css("flex:1")} />

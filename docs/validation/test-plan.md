@@ -125,3 +125,12 @@ separate, non-release-gating measurement.
 | Author | | | |
 | Process SME | | | |
 | Quality Assurance | | | |
+
+## Addendum A — after the first execution (27 Sep 2026)
+
+HT-001 was executed once for acceptance (VR-20260927-79d97bc; criteria not met) and then marked
+**consumed**, because its results informed change requests CR-002–CR-005. The next acceptance
+execution uses a new held-out set, **HT-002**, written and label-verified by an independent process
+SME (deviations DEV-001, -002, -003, -005), under the criteria in §5 unless they are revised and
+re-approved before that execution. HT-002 must be frozen with `npm run validate -- --freeze` after
+its ID and file are set in `scripts/validate.mjs` and before it is run.
