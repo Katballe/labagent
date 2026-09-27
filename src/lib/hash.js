@@ -5,8 +5,5 @@ export async function sha256(text) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// Short display form: first4…last4.
-export async function shortHash(text) {
-  const h = await sha256(text);
-  return h.slice(0, 4) + "…" + h.slice(-4);
-}
+// Short display form of a full hex hash: first4…last4.
+export const short = (h) => (h ? h.slice(0, 4) + "…" + h.slice(-4) : "—");

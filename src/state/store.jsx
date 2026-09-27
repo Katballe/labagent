@@ -1,10 +1,9 @@
 import React, {
-  createContext, useContext, useState, useEffect, useCallback, useSyncExternalStore,
+  createContext, useContext, useState, useCallback, useRef, useSyncExternalStore,
 } from "react";
 import { engine } from "../ai/engine.js";
 import { PROMPT_VERSION } from "../ai/prompts.js";
-import { shortHash } from "../lib/hash.js";
-import { AUDIT_SEED, AUDIT_START } from "../data/dataset.js";
+import { makeEntry, loadAudit, saveAudit, clearAudit } from "../lib/audit.js";
 
 const AppCtx = createContext(null);
 export const useApp = () => useContext(AppCtx);
@@ -18,50 +17,73 @@ export function useEngine() {
   );
 }
 
-function now() {
-  const d = new Date();
-  const p = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+const REVIEWER_KEY = "labagent.reviewer";
+export const DEFAULT_REVIEWER = "demo-user";
+
+function readReviewer() {
+  try { return localStorage.getItem(REVIEWER_KEY) || DEFAULT_REVIEWER; } catch { return DEFAULT_REVIEWER; }
 }
 
 export function AppProvider({ children }) {
   const [tab, setTab] = useState("assistant");
   const [threshold, setThreshold] = useState(0.6);
-  const [audit, setAudit] = useState(() => AUDIT_SEED.slice());
-  const [auditN, setAuditN] = useState(AUDIT_START);
+  const [engineOpen, setEngineOpen] = useState(false);
+  const [reviewer, setReviewerState] = useState(readReviewer);
+  const reviewerRef = useRef(reviewer);
+  const [audit, setAudit] = useState(loadAudit); // oldest first
+  const [persisted, setPersisted] = useState(true);
+  const auditRef = useRef(audit);
+  const queue = useRef(Promise.resolve());
   const eng = useEngine();
 
-  // Append an entry to the tamper-evident audit trail with a real content hash.
-  const addAudit = useCallback(
-    async (kind, action, hashContent) => {
-      const n = auditN + 1;
-      setAuditN(n);
-      const modelShort = eng.backend === "ollama" ? `ollama:${eng.modelId}` : eng.modelId.replace(/-MLC$/, "");
-      const hash = await shortHash(hashContent || `${kind}|${action}|${n}`);
-      const entry = {
-        id: "AUD-0" + n,
-        ts: now(),
-        actor: "m.katballe",
+  const setReviewer = useCallback((name) => {
+    const clean = String(name || "").trim().slice(0, 40) || DEFAULT_REVIEWER;
+    reviewerRef.current = clean;
+    setReviewerState(clean);
+    try { localStorage.setItem(REVIEWER_KEY, clean); } catch { /* per-session only */ }
+  }, []);
+
+  // Append to the hash-chained audit trail. Appends are serialised, so two
+  // events in quick succession can never read the same "previous" entry.
+  const addAudit = useCallback((kind, action, content = "", { model } = {}) => {
+    const append = async () => {
+      const prev = auditRef.current[auditRef.current.length - 1];
+      const entry = await makeEntry(prev, {
+        actor: reviewerRef.current,
         kind,
         action,
-        model: kind === "T3" && action.includes("armed") ? "—" : modelShort,
+        model: model ?? engine.label(),
         prompt: PROMPT_VERSION,
-        hash,
-      };
-      setAudit((a) => [entry, ...a]);
+        content,
+      });
+      auditRef.current = [...auditRef.current, entry];
+      setAudit(auditRef.current);
+      setPersisted(saveAudit(auditRef.current));
       return entry.id;
-    },
-    [auditN, eng.backend, eng.modelId]
-  );
+    };
+    const p = queue.current.then(append, append);
+    queue.current = p.catch(() => {});
+    return p;
+  }, []);
+
+  const resetAudit = useCallback(() => {
+    queue.current = queue.current.then(() => {
+      clearAudit();
+      auditRef.current = [];
+      setAudit([]);
+    });
+    return queue.current;
+  }, []);
 
   const value = {
     tab, setTab,
     threshold, setThreshold,
-    audit, addAudit,
+    reviewer, setReviewer,
+    audit, addAudit, resetAudit, auditPersisted: persisted,
     engine: eng,
+    engineOpen, setEngineOpen,
     loadModel: (backend, modelId) => engine.load(backend, modelId),
+    switchToInstant: () => engine.switchToInstant(),
   };
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
 }
-
-export { now };

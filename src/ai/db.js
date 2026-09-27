@@ -1,71 +1,64 @@
-// Read-only synthetic LIMS database, backed by a real in-browser SQLite
-// (sql.js / WASM). The Tier 2 assistant writes SQL; we validate it is
-// SELECT-only and execute it for real against this database. There is no write
-// path — the guard rejects anything that is not a single read query.
+// Read-only synthetic LIMS database (sql.js / SQLite) — client side.
+// Queries are validated here (fast, friendly rejection) and executed in a Web
+// Worker whose database is also locked read-only at the engine level. A query
+// that runs longer than QUERY_TIMEOUT_MS is stopped by terminating the worker;
+// the next query starts a fresh one.
 
-import initSqlJs from "sql.js";
-// Let Vite resolve and fingerprint the wasm binary itself. This works in dev,
-// in the production build, and from a GitHub Pages sub-path.
-import wasmUrl from "sql.js/dist/sql-wasm.wasm?url";
-import { SCHEMA, ROWS, NOW } from "../data/seed.js";
+import { validateSelect } from "./sqlcore.js";
+export { NOW } from "../data/seed.js";
+export { validateSelect };
 
-let _db = null;
-let _loading = null;
+export const QUERY_TIMEOUT_MS = 3000;
+export const ROW_LIMIT = 500;
 
-function quote(v) {
-  if (v === null || v === undefined) return "NULL";
-  if (typeof v === "number") return String(v);
-  return "'" + String(v).replace(/'/g, "''") + "'";
+let worker = null;
+let seq = 0;
+const pending = new Map();
+
+function failAll(message) {
+  for (const [, p] of pending) { clearTimeout(p.timer); p.reject(new Error(message)); }
+  pending.clear();
 }
 
-export async function getDb() {
-  if (_db) return _db;
-  if (_loading) return _loading;
-  _loading = (async () => {
-    const SQL = await initSqlJs({ locateFile: () => wasmUrl });
-    const db = new SQL.Database();
-    db.run(SCHEMA);
-    for (const [table, rows] of Object.entries(ROWS)) {
-      for (const row of rows) {
-        const placeholders = row.map(quote).join(", ");
-        db.run(`INSERT INTO ${table} VALUES (${placeholders});`);
-      }
-    }
-    _db = db;
-    return db;
-  })();
-  return _loading;
+function spawn() {
+  worker = new Worker(new URL("./db.worker.js", import.meta.url), { type: "module" });
+  worker.onmessage = (e) => {
+    const p = pending.get(e.data.id);
+    if (!p) return;
+    pending.delete(e.data.id);
+    clearTimeout(p.timer);
+    if (e.data.error) p.reject(new Error(e.data.error));
+    else p.resolve(e.data);
+  };
+  worker.onerror = (e) => {
+    failAll("database worker failed: " + (e.message || "unknown error"));
+    worker?.terminate();
+    worker = null;
+  };
 }
 
-// Validate a statement is a single, read-only SELECT. Returns {ok, reason}.
-export function validateSelect(sql) {
-  const cleaned = sql
-    .replace(/--[^\n]*/g, " ") // line comments
-    .replace(/\/\*[\s\S]*?\*\//g, " ") // block comments
-    .trim()
-    .replace(/;\s*$/, ""); // one trailing semicolon ok
-
-  if (!cleaned) return { ok: false, reason: "empty statement" };
-  if (cleaned.includes(";"))
-    return { ok: false, reason: "multiple statements are not allowed" };
-  if (!/^(select|with)\b/i.test(cleaned))
-    return { ok: false, reason: "only SELECT queries are permitted" };
-  const banned = /\b(insert|update|delete|drop|alter|create|attach|detach|pragma|replace|vacuum|reindex|truncate)\b/i;
-  if (banned.test(cleaned))
-    return { ok: false, reason: "write/DDL keywords are forbidden" };
-
-  return { ok: true, sql: cleaned };
+/** Start the worker (and load + seed the database) ahead of the first query. */
+export function warmDb() {
+  if (!worker) spawn();
 }
 
-// Runs a validated SELECT. Returns { cols, rows } or throws.
-export async function runSelect(sql) {
+/** Runs a validated SELECT. Resolves { cols, rows, truncated, total }; rejects on rejection, SQL error or timeout. */
+export function runSelect(sql, { timeoutMs = QUERY_TIMEOUT_MS } = {}) {
   const v = validateSelect(sql);
-  if (!v.ok) throw new Error("Rejected: " + v.reason);
-  const db = await getDb();
-  const res = db.exec(v.sql);
-  if (!res.length) return { cols: [], rows: [] };
-  const { columns, values } = res[0];
-  return { cols: columns, rows: values };
+  if (!v.ok) return Promise.reject(new Error("Rejected: " + v.reason));
+  if (!worker) spawn();
+  const id = ++seq;
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      pending.delete(id);
+      worker?.terminate(); // the only way to stop a query that won't finish
+      worker = null;
+      failAll("database restarted");
+      const err = new Error(`Query stopped after ${timeoutMs / 1000} s — nothing was written (read-only). The database restarts for the next query.`);
+      err.timeout = true;
+      reject(err);
+    }, timeoutMs);
+    pending.set(id, { resolve, reject, timer });
+    worker.postMessage({ id, sql: v.sql });
+  }).then(({ cols, rows }) => ({ cols, rows: rows.slice(0, ROW_LIMIT), truncated: rows.length > ROW_LIMIT, total: rows.length }));
 }
-
-export { NOW };
